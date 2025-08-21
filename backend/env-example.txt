@@ -1,0 +1,33 @@
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+
+# Database
+MONGODB_URI=mongodb://localhost:27017/eventpass
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key-change-in-production
+
+# Stripe
+STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+STRIPE_SECRET_KEY=sk_test_your_stripe_publishable_key
+STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
+
+# Civic Auth (get these from Civic dashboard)
+CIVIC_CLIENT_ID=your_civic_client_id
+CIVIC_CLIENT_SECRET=your_civic_client_secret
+
+# Email (optional - for notifications)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+
+# Pesapal Payment Gateway Configuration
+PESAPAL_ENV=sandbox
+PESAPAL_CONSUMER_KEY=your_pesapal_consumer_key
+PESAPAL_CONSUMER_SECRET=your_pesapal_consumer_secret
+PESAPAL_CALLBACK_URL=https://your-frontend-domain.com/payment/callback
+PESAPAL_IPN_URL=https://your-backend-domain.onrender.com/api/pesapal/ipn
+APP_BASE_URL_FRONTEND=https://your-frontend-domain.com

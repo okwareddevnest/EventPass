@@ -1,0 +1,46 @@
+# EventPass Frontend Production Configuration
+# Replace placeholder values with your actual production credentials
+
+# API Configuration
+VITE_API_BASE_URL=https://eventpass-backend.onrender.com
+
+# Stripe Configuration - Replace with your actual Stripe publishable key
+VITE_STRIPE_PUBLISHABLE_KEY=pk_live_your_actual_stripe_publishable_key_here
+
+# Application Configuration
+VITE_APP_NAME=EventPass
+VITE_APP_DESCRIPTION=Event Ticketing Platform with Blockchain Verification
+VITE_APP_VERSION=1.0.0
+
+# Feature Flags
+VITE_ENABLE_ANALYTICS=false
+VITE_ENABLE_PWA=false
+VITE_ENABLE_SERVICE_WORKER=false
+
+# External Service URLs
+VITE_CIVIC_AUTH_URL=https://auth.civic.com
+VITE_STRIPE_CHECKOUT_URL=https://js.stripe.com/v3/
+
+# Security Configuration
+VITE_ENABLE_DEVTOOLS=false
+VITE_ENABLE_ERROR_BOUNDARY=true
+
+# Performance Configuration
+VITE_ENABLE_COMPRESSION=true
+VITE_ENABLE_LAZY_LOADING=true
+
+# UI Configuration
+VITE_PARTICLES_ENABLED=true
+VITE_GLASSMORPHISM_ENABLED=true
+
+# Social Media URLs
+VITE_TWITTER_URL=https://twitter.com/eventpass
+VITE_DISCORD_URL=https://discord.gg/eventpass
+VITE_GITHUB_URL=https://github.com/eventpass
+
+# SETUP INSTRUCTIONS:
+# 1. Copy this file to .env
+# 2. Replace all placeholder values with actual production credentials
+# 3. For Stripe, get your publishable key from Stripe Dashboard
+# 4. For API URL, use your actual Render backend URL
+# 5. Never commit .env files to version control
