@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { useUser } from '@civic/auth/react';
 import { User, Mail, Wallet, Shield, Calendar, QrCode, Download, Eye } from 'lucide-react';
+import { ticketsAPI } from '../services/api';
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();
+  const { user: civicUser } = useUser();
   const { success, error } = useNotification();
+
+  // Use Civic user if available, fallback to custom auth user
+  const currentUser = civicUser || user;
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,30 +23,25 @@ const Profile = () => {
   });
 
   useEffect(() => {
-    if (user) {
+    if (currentUser) {
       setFormData({
-        name: user.name || '',
-        email: user.email || '',
-        walletAddress: user.walletAddress || '',
+        name: currentUser.name || '',
+        email: currentUser.email || '',
+        walletAddress: currentUser.walletAddress || '',
       });
       fetchUserTickets();
     }
-  }, [user]);
+  }, [currentUser]);
 
   const fetchUserTickets = async () => {
     try {
-      const response = await fetch('/api/tickets/my-tickets', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTickets(data.tickets);
-      }
+      // Use the API service which handles the base URL correctly
+      const data = await ticketsAPI.getUserTickets();
+      setTickets(data.tickets || []);
     } catch (err) {
       console.error('Error fetching tickets:', err);
+      // Set empty array on error to prevent crashes
+      setTickets([]);
     } finally {
       setLoading(false);
     }
@@ -58,6 +59,8 @@ const Profile = () => {
     e.preventDefault();
 
     try {
+      // For Civic Auth users, profile updates might need to go through Civic's API
+      // For now, we'll try the custom auth update
       const result = await updateProfile(formData);
 
       if (result.success) {
@@ -74,9 +77,9 @@ const Profile = () => {
 
   const handleCancelEdit = () => {
     setFormData({
-      name: user.name || '',
-      email: user.email || '',
-      walletAddress: user.walletAddress || '',
+      name: currentUser.name || '',
+      email: currentUser.email || '',
+      walletAddress: currentUser.walletAddress || '',
     });
     setEditing(false);
   };
@@ -104,7 +107,7 @@ const Profile = () => {
     }
   };
 
-  if (!user) {
+  if (!currentUser) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -143,7 +146,7 @@ const Profile = () => {
                   <User size={20} className="text-primary" />
                   <div>
                     <p className="text-neutral/70 text-sm">Name</p>
-                    <p className="text-neutral font-medium">{user.name}</p>
+                    <p className="text-neutral font-medium">{currentUser.name}</p>
                   </div>
                 </div>
 
@@ -151,7 +154,7 @@ const Profile = () => {
                   <Mail size={20} className="text-secondary" />
                   <div>
                     <p className="text-neutral/70 text-sm">Email</p>
-                    <p className="text-neutral font-medium">{user.email}</p>
+                    <p className="text-neutral font-medium">{currentUser.email}</p>
                   </div>
                 </div>
 
@@ -160,7 +163,7 @@ const Profile = () => {
                   <div>
                     <p className="text-neutral/70 text-sm">Wallet Address</p>
                     <p className="text-neutral font-medium font-mono text-sm">
-                      {user.walletAddress || 'Not connected'}
+                      {currentUser.walletAddress || 'Not connected'}
                     </p>
                   </div>
                 </div>
@@ -169,7 +172,7 @@ const Profile = () => {
                   <Shield size={20} className="text-green-400" />
                   <div>
                     <p className="text-neutral/70 text-sm">Role</p>
-                    <p className="text-neutral font-medium capitalize">{user.role}</p>
+                    <p className="text-neutral font-medium capitalize">{currentUser.role}</p>
                   </div>
                 </div>
 
@@ -178,7 +181,7 @@ const Profile = () => {
                   <div>
                     <p className="text-neutral/70 text-sm">Member Since</p>
                     <p className="text-neutral font-medium">
-                      {formatDate(user.createdAt)}
+                      {formatDate(currentUser.createdAt)}
                     </p>
                   </div>
                 </div>
