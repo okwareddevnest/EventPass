@@ -9,14 +9,15 @@ MONGODB_URI=mongodb://localhost:27017/eventpass
 # JWT
 JWT_SECRET=your-super-secret-jwt-key-change-in-production
 
-# Stripe
-STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
-STRIPE_SECRET_KEY=sk_test_your_stripe_publishable_key
-STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
+# Stripe (Removed - using Pesapal instead)
+# STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+# STRIPE_SECRET_KEY=sk_test_your_stripe_publishable_key
+# STRIPE_WEBHOOK_SECRET=whsec_your_stripe_webhook_secret
 
 # Civic Auth (get these from Civic dashboard)
 CIVIC_CLIENT_ID=your_civic_client_id
 CIVIC_CLIENT_SECRET=your_civic_client_secret
+CIVIC_REDIRECT_URI=https://your-frontend-domain.com/auth/callback
 
 # Email (optional - for notifications)
 SMTP_HOST=smtp.gmail.com

@@ -15,10 +15,10 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.stripe.com"],
+      connectSrc: ["'self'"],
     },
   },
 }));
@@ -56,7 +56,6 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/eventpass
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/tickets', require('./routes/tickets'));
-app.use('/api/payments', require('./routes/payments'));
 app.use('/api/pesapal', require('./routes/pesapal'));
 
 // Health check endpoint

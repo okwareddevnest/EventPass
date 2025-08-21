@@ -3,7 +3,6 @@ const router = express.Router();
 const Ticket = require('../models/Ticket');
 const Event = require('../models/Event');
 const { authenticateToken } = require('../middleware/auth');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 // Get user's tickets
 router.get('/my-tickets', authenticateToken, async (req, res) => {
@@ -38,8 +37,8 @@ router.get('/my-tickets', authenticateToken, async (req, res) => {
   }
 });
 
-// Create payment intent for ticket purchase
-router.post('/create-payment-intent', authenticateToken, async (req, res) => {
+// Validate event for ticket purchase (for Pesapal integration)
+router.post('/validate-purchase', authenticateToken, async (req, res) => {
   try {
     const { eventId, quantity = 1 } = req.body;
 
@@ -62,60 +61,38 @@ router.post('/create-payment-intent', authenticateToken, async (req, res) => {
       });
     }
 
-    const amount = Math.round(event.price * 100); // Stripe uses cents
-    const totalAmount = amount * quantity;
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: totalAmount,
-      currency: 'usd',
-      metadata: {
-        eventId: eventId,
-        userId: req.user._id.toString(),
-        quantity: quantity.toString(),
-      },
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
+    const totalAmount = event.price * quantity;
 
     res.json({
-      clientSecret: paymentIntent.client_secret,
-      amount: totalAmount,
+      isValid: true,
       event: {
         title: event.title,
         price: event.price,
         quantity,
-        total: event.price * quantity,
+        total: totalAmount,
       },
     });
   } catch (error) {
-    console.error('Create payment intent error:', error);
+    console.error('Validate purchase error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// Confirm ticket purchase after successful payment
-router.post('/purchase', authenticateToken, async (req, res) => {
+// Create tickets after successful Pesapal payment
+router.post('/create-from-pesapal', authenticateToken, async (req, res) => {
   try {
-    const { paymentIntentId, eventId, quantity = 1 } = req.body;
+    const { orderTrackingId, eventId, quantity = 1 } = req.body;
 
-    if (!paymentIntentId || !eventId) {
+    if (!orderTrackingId || !eventId) {
       return res.status(400).json({
-        message: 'Payment intent ID and event ID are required'
+        message: 'Order tracking ID and event ID are required'
       });
     }
 
-    // Verify payment intent
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    if (paymentIntent.status !== 'succeeded') {
-      return res.status(400).json({ message: 'Payment not completed' });
-    }
-
-    // Check if tickets were already created for this payment
-    const existingTickets = await Ticket.find({ paymentIntentId });
+    // Check if tickets were already created for this order
+    const existingTickets = await Ticket.find({ orderTrackingId });
     if (existingTickets.length > 0) {
-      return res.status(409).json({ message: 'Tickets already created for this payment' });
+      return res.status(409).json({ message: 'Tickets already created for this order' });
     }
 
     const event = await Event.findById(eventId);
@@ -130,7 +107,8 @@ router.post('/purchase', authenticateToken, async (req, res) => {
         userId: req.user._id,
         eventId: eventId,
         price: event.price,
-        paymentIntentId: paymentIntentId,
+        orderTrackingId: orderTrackingId,
+        paymentIntentId: orderTrackingId, // Use order tracking ID as payment intent ID for compatibility
       });
       tickets.push(ticket);
     }
@@ -143,7 +121,7 @@ router.post('/purchase', authenticateToken, async (req, res) => {
     });
 
     res.status(201).json({
-      message: 'Tickets purchased successfully',
+      message: 'Tickets created successfully',
       tickets: tickets.map(ticket => ({
         ticketId: ticket.ticketId,
         qrCodeUrl: ticket.qrCodeUrl,
@@ -155,7 +133,7 @@ router.post('/purchase', authenticateToken, async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('Purchase tickets error:', error);
+    console.error('Create tickets from Pesapal error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -272,7 +250,7 @@ router.put('/:ticketId/cancel', authenticateToken, async (req, res) => {
       $inc: { currentAttendees: -1 }
     });
 
-    // TODO: Process refund through Stripe
+    // TODO: Process refund through Pesapal
 
     res.json({
       message: 'Ticket cancelled successfully',

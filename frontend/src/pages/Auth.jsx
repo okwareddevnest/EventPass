@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { Shield, Wallet, ArrowLeft } from 'lucide-react';
+import { useCivicAuthContext, CivicAuthProvider } from '@civic/auth/react';
+import { useCivicAuthContext as useCivicAuthWeb3Context, CivicAuthProvider as CivicAuthWeb3Provider } from '@civic/auth-web3/react';
 
 const Auth = () => {
   const { login, isAuthenticated } = useAuth();
@@ -12,6 +14,16 @@ const Auth = () => {
 
   const [loading, setLoading] = useState(false);
   const [authMethod, setAuthMethod] = useState('web2'); // 'web2' or 'web3'
+  
+  // Civic Auth configuration
+  const civicConfig = {
+    clientId: import.meta.env.VITE_CIVIC_CLIENT_ID || 'your-civic-client-id',
+    redirectUri: window.location.origin + '/auth/callback',
+  };
+
+  // Civic Auth hooks
+  const { signIn, signOut, user, isAuthenticated: isCivicAuthenticated } = useCivicAuthContext();
+  const { signIn: signInWeb3, signOut: signOutWeb3, user: userWeb3, isAuthenticated: isCivicWeb3Authenticated } = useCivicAuthWeb3Context();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -25,29 +37,15 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Simulate Civic Web2 Auth
-      // In production, this would integrate with Civic's Web2 SDK
-      const mockCivicToken = 'mock-civic-token-' + Date.now();
-      const mockUserData = {
-        civicId: 'user-' + Date.now(),
-        name: 'Demo User',
-        email: 'demo@example.com',
-        walletAddress: null,
-      };
-
-      const result = await login(mockCivicToken, mockUserData);
-
-      if (result.success) {
-        info('Successfully logged in with Civic Auth!');
-        const from = location.state?.from?.pathname || '/';
-        navigate(from, { replace: true });
-      } else {
-        error(result.error || 'Login failed');
-      }
+      // Use Civic Auth Web2 sign-in
+      await signIn();
+      
+      // The user will be redirected to Civic Auth
+      // After successful authentication, they'll be redirected back to /auth/callback
+      // where we'll handle the token exchange and user creation
     } catch (err) {
       console.error('Web2 login error:', err);
       error('Failed to authenticate with Civic');
-    } finally {
       setLoading(false);
     }
   };
@@ -56,35 +54,12 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Check if MetaMask or other Web3 wallet is available
-      if (!window.ethereum) {
-        error('Please install MetaMask or another Web3 wallet');
-        return;
-      }
-
-      // Request account access
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const walletAddress = accounts[0];
-
-      // Simulate Civic Web3 Auth
-      // In production, this would integrate with Civic's Web3 SDK
-      const mockCivicToken = 'mock-civic-web3-token-' + Date.now();
-      const mockUserData = {
-        civicId: 'web3-user-' + Date.now(),
-        name: 'Web3 User',
-        email: 'web3@example.com',
-        walletAddress: walletAddress,
-      };
-
-      const result = await login(mockCivicToken, mockUserData);
-
-      if (result.success) {
-        info('Successfully logged in with Civic Web3 Auth!');
-        const from = location.state?.from?.pathname || '/';
-        navigate(from, { replace: true });
-      } else {
-        error(result.error || 'Login failed');
-      }
+      // Use Civic Auth Web3 sign-in
+      await signInWeb3();
+      
+      // The user will be redirected to Civic Auth Web3
+      // After successful authentication, they'll be redirected back to /auth/callback
+      // where we'll handle the token exchange and user creation
     } catch (err) {
       console.error('Web3 login error:', err);
       if (err.code === 4001) {
@@ -92,7 +67,6 @@ const Auth = () => {
       } else {
         error('Failed to authenticate with Web3 wallet');
       }
-    } finally {
       setLoading(false);
     }
   };
@@ -224,11 +198,15 @@ const Auth = () => {
           </div>
         </div>
 
-        {/* Demo Notice */}
-        <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-          <p className="text-xs text-yellow-200 text-center">
-            <strong>Demo Mode:</strong> This is a demo implementation. In production,
-            this would integrate with Civic's actual authentication SDKs.
+        {/* Civic Auth Info */}
+        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+          <p className="text-xs text-blue-200 text-center">
+            <strong>Powered by Civic Auth:</strong> Secure, decentralized authentication 
+            with support for Web2 and Web3 wallets. 
+            <a href="https://docs.civic.com/" target="_blank" rel="noopener noreferrer" 
+               className="text-blue-300 hover:text-blue-100 underline ml-1">
+              Learn more
+            </a>
           </p>
         </div>
       </div>

@@ -88,18 +88,50 @@ NODE_ENV=production
 PORT=5000
 MONGODB_URI=your_actual_mongodb_atlas_connection_string
 JWT_SECRET=your_secure_random_jwt_secret_64_chars_min
-STRIPE_PUBLISHABLE_KEY=pk_live_your_actual_stripe_publishable_key
-STRIPE_SECRET_KEY=sk_live_your_actual_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=whsec_your_actual_stripe_webhook_secret
 CIVIC_CLIENT_ID=your_actual_civic_client_id
 CIVIC_CLIENT_SECRET=your_actual_civic_client_secret
+CIVIC_REDIRECT_URI=https://your-frontend-domain.com/auth/callback
 FRONTEND_URL=https://your-vercel-app-domain.vercel.app
+
+# Pesapal Configuration
+PESAPAL_ENV=sandbox
+PESAPAL_CONSUMER_KEY=your_pesapal_consumer_key
+PESAPAL_CONSUMER_SECRET=your_pesapal_consumer_secret
+PESAPAL_CALLBACK_URL=https://your-frontend-domain.com/payment/callback
+PESAPAL_IPN_URL=https://your-backend-domain.onrender.com/api/pesapal/ipn
+APP_BASE_URL_FRONTEND=https://your-frontend-domain.com
 ```
 
 #### Frontend (.env) - Required for Production
 ```env
 VITE_API_BASE_URL=https://your-render-backend-url.onrender.com
-VITE_STRIPE_PUBLISHABLE_KEY=pk_live_your_actual_stripe_publishable_key
+VITE_CIVIC_CLIENT_ID=your_civic_client_id_from_dashboard
+```
+
+### 🔐 Civic Auth Setup
+
+1. **Sign up for Civic Auth**
+   - Visit [auth.civic.com](https://auth.civic.com)
+   - Create an account and get your Client ID and Secret
+
+2. **Configure your app in Civic Dashboard**
+   - Set the redirect URI to: `https://your-domain.com/auth/callback`
+   - Enable Web2 and Web3 authentication options
+   - Configure allowed domains
+
+3. **Update environment variables**
+   - Set `CIVIC_CLIENT_ID` and `CIVIC_CLIENT_SECRET` in backend
+   - Set `VITE_CIVIC_CLIENT_ID` in frontend
+   - Set `CIVIC_REDIRECT_URI` in backend
+
+4. **Test authentication**
+   - Try both Web2 (email/social) and Web3 (wallet) login options
+   - Verify user creation and JWT token generation
+
+#### Frontend (.env) - Required for Production
+```env
+VITE_API_BASE_URL=https://your-render-backend-url.onrender.com
+VITE_CIVIC_CLIENT_ID=your_civic_client_id_from_dashboard
 ```
 
 ### Favicon Setup
@@ -122,20 +154,24 @@ MONGODB_URI=mongodb://localhost:27017/eventpass
 # Authentication
 JWT_SECRET=your-super-secret-jwt-key
 
-# Stripe
-STRIPE_PUBLISHABLE_KEY=pk_test_your_key
-STRIPE_SECRET_KEY=sk_test_your_key
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-
 # Civic Auth
 CIVIC_CLIENT_ID=your_civic_client_id
 CIVIC_CLIENT_SECRET=your_civic_client_secret
+CIVIC_REDIRECT_URI=http://localhost:5173/auth/callback
+
+# Pesapal (for payments)
+PESAPAL_ENV=sandbox
+PESAPAL_CONSUMER_KEY=your_pesapal_consumer_key
+PESAPAL_CONSUMER_SECRET=your_pesapal_consumer_secret
+PESAPAL_CALLBACK_URL=http://localhost:5173/payment/callback
+PESAPAL_IPN_URL=http://localhost:5000/api/pesapal/ipn
+APP_BASE_URL_FRONTEND=http://localhost:5173
 ```
 
 #### Frontend (.env)
 ```env
 VITE_API_BASE_URL=http://localhost:5000
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_key
+VITE_CIVIC_CLIENT_ID=your_civic_client_id
 ```
 
 ## 📊 Database Schema

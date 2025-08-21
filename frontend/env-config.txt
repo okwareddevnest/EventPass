@@ -4,8 +4,8 @@
 # API Configuration
 VITE_API_BASE_URL=https://eventpass-backend.onrender.com
 
-# Stripe Configuration - Replace with your actual Stripe publishable key
-VITE_STRIPE_PUBLISHABLE_KEY=pk_live_your_actual_stripe_publishable_key_here
+# Civic Auth Configuration - Get from Civic Dashboard
+VITE_CIVIC_CLIENT_ID=your_civic_client_id_from_dashboard
 
 # Application Configuration
 VITE_APP_NAME=EventPass
