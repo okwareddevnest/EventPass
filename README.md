@@ -128,11 +128,20 @@ VITE_CIVIC_CLIENT_ID=your_civic_client_id_from_dashboard
    - Try both Web2 (email/social) and Web3 (wallet) login options
    - Verify user creation and JWT token generation
 
-#### Frontend (.env) - Required for Production
+### Frontend Environment Setup
+
+**Create a `.env` file in the `frontend` directory with:**
+
 ```env
 VITE_API_BASE_URL=https://your-render-backend-url.onrender.com
 VITE_CIVIC_CLIENT_ID=your_civic_client_id_from_dashboard
 ```
+
+**Setup Instructions:**
+1. Create a `.env` file in the `frontend` directory
+2. Copy the above variables and replace with your actual values
+3. For development, use `VITE_API_BASE_URL=http://localhost:5000`
+4. Get your Civic Client ID from [auth.civic.com](https://auth.civic.com)
 
 ### Favicon Setup
 The favicon is automatically configured to use `/eventpass-logo.png` from the public directory. Ensure your logo file is placed at `frontend/public/eventpass-logo.png`.
