@@ -14,8 +14,6 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
           ui: ['lucide-react'],
-          payments: ['@stripe/stripe-js', '@stripe/react-stripe-js'],
-          qr: ['qrcode', 'react-qr-code'],
           particles: ['tsparticles', 'react-tsparticles'],
         },
       },

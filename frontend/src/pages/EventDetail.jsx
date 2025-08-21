@@ -272,7 +272,7 @@ const EventDetail = () => {
 
             <div className="mt-4 text-center">
               <p className="text-xs text-neutral/50">
-                Secure payment powered by Stripe
+                Secure payment powered by Pesapal
               </p>
             </div>
 
