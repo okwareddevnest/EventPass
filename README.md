@@ -142,6 +142,15 @@ VITE_CIVIC_CLIENT_ID=your_civic_client_id_from_dashboard
 2. Copy the above variables and replace with your actual values
 3. For development, use `VITE_API_BASE_URL=http://localhost:5000`
 4. Get your Civic Client ID from [auth.civic.com](https://auth.civic.com)
+5. Set the redirect URI in Civic Auth dashboard to: `http://localhost:5173/auth/callback`
+
+**Development Quick Start:**
+```bash
+# In frontend directory
+echo "VITE_API_BASE_URL=http://localhost:5000" > .env
+echo "VITE_CIVIC_CLIENT_ID=your_actual_civic_client_id" >> .env
+npm run dev
+```
 
 ### Favicon Setup
 The favicon is automatically configured to use `/eventpass-logo.png` from the public directory. Ensure your logo file is placed at `frontend/public/eventpass-logo.png`.

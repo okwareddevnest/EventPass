@@ -3,8 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { Shield, Wallet, ArrowLeft } from 'lucide-react';
-import { useCivicAuthContext, CivicAuthProvider } from '@civic/auth/react';
-import { useCivicAuthContext as useCivicAuthWeb3Context, CivicAuthProvider as CivicAuthWeb3Provider } from '@civic/auth-web3/react';
+import { useUser } from '@civic/auth/react';
 
 const Auth = () => {
   const { login, isAuthenticated } = useAuth();
@@ -14,16 +13,13 @@ const Auth = () => {
 
   const [loading, setLoading] = useState(false);
   const [authMethod, setAuthMethod] = useState('web2'); // 'web2' or 'web3'
-  
-  // Civic Auth configuration
-  const civicConfig = {
-    clientId: import.meta.env.VITE_CIVIC_CLIENT_ID || 'your-civic-client-id',
-    redirectUri: window.location.origin + '/auth/callback',
-  };
 
-  // Civic Auth hooks
-  const { signIn, signOut, user, isAuthenticated: isCivicAuthenticated } = useCivicAuthContext();
-  const { signIn: signInWeb3, signOut: signOutWeb3, user: userWeb3, isAuthenticated: isCivicWeb3Authenticated } = useCivicAuthWeb3Context();
+  // Check if Civic Auth is configured
+  const civicClientId = import.meta.env.VITE_CIVIC_CLIENT_ID;
+  const isCivicConfigured = civicClientId && civicClientId !== 'your_civic_client_id_from_dashboard';
+
+  // Use Civic Auth hook
+  const { user, signIn, signOut, isLoading, authStatus } = useUser();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -33,40 +29,31 @@ const Auth = () => {
     }
   }, [isAuthenticated, navigate, location]);
 
-  const handleWeb2Login = async () => {
+    const handleLogin = async () => {
     setLoading(true);
 
+    if (!isCivicConfigured) {
+      error('Civic Auth is not configured. Please set up your Civic Client ID.');
+      setLoading(false);
+      return;
+    }
+
+    if (!signIn) {
+      error('Civic Auth is not available. Please check your configuration.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Use Civic Auth Web2 sign-in
+      // Use Civic Auth sign-in (handles both Web2 and Web3 based on user selection)
       await signIn();
-      
+
       // The user will be redirected to Civic Auth
       // After successful authentication, they'll be redirected back to /auth/callback
       // where we'll handle the token exchange and user creation
     } catch (err) {
-      console.error('Web2 login error:', err);
+      console.error('Login error:', err);
       error('Failed to authenticate with Civic');
-      setLoading(false);
-    }
-  };
-
-  const handleWeb3Login = async () => {
-    setLoading(true);
-
-    try {
-      // Use Civic Auth Web3 sign-in
-      await signInWeb3();
-      
-      // The user will be redirected to Civic Auth Web3
-      // After successful authentication, they'll be redirected back to /auth/callback
-      // where we'll handle the token exchange and user creation
-    } catch (err) {
-      console.error('Web3 login error:', err);
-      if (err.code === 4001) {
-        error('User rejected the request');
-      } else {
-        error('Failed to authenticate with Web3 wallet');
-      }
       setLoading(false);
     }
   };
@@ -99,29 +86,51 @@ const Auth = () => {
             </p>
           </div>
 
+          {/* Configuration Status */}
+          {!isCivicConfigured && (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6">
+              <h3 className="text-yellow-200 font-semibold mb-2">Configuration Required</h3>
+              <p className="text-yellow-200/80 text-sm mb-3">
+                Civic Auth needs to be configured to enable authentication.
+              </p>
+              <div className="text-xs text-yellow-200/70">
+                <p className="mb-1"><strong>Setup Steps:</strong></p>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>Get your Civic Client ID from <a href="https://auth.civic.com" target="_blank" rel="noopener noreferrer" className="text-yellow-300 underline">auth.civic.com</a></li>
+                  <li>Update VITE_CIVIC_CLIENT_ID in your .env file</li>
+                  <li>Restart the development server</li>
+                </ol>
+              </div>
+            </div>
+          )}
+
           {/* Auth Method Toggle */}
           <div className="flex bg-white/5 rounded-lg p-1 mb-6">
             <button
               onClick={() => setAuthMethod('web2')}
+              disabled={!isCivicConfigured}
               className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
                 authMethod === 'web2'
                   ? 'bg-primary text-white shadow-lg'
                   : 'text-neutral/70 hover:text-neutral'
-              }`}
+              } ${!isCivicConfigured ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Shield size={16} className="inline mr-2" />
               Civic Web2
+              {!isCivicConfigured && ' (Configure)'}
             </button>
             <button
               onClick={() => setAuthMethod('web3')}
+              disabled={!isCivicConfigured}
               className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
                 authMethod === 'web3'
                   ? 'bg-secondary text-white shadow-lg'
                   : 'text-neutral/70 hover:text-neutral'
-              }`}
+              } ${!isCivicConfigured ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Wallet size={16} className="inline mr-2" />
               Civic Web3
+              {!isCivicConfigured && ' (Configure)'}
             </button>
           </div>
 
@@ -130,8 +139,8 @@ const Auth = () => {
             {authMethod === 'web2' ? (
               <div className="text-center">
                 <button
-                  onClick={handleWeb2Login}
-                  disabled={loading}
+                  onClick={handleLogin}
+                  disabled={loading || !isCivicConfigured}
                   className="w-full bg-gradient-to-r from-primary to-primary/80 text-white py-4 px-6 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {loading ? (
@@ -139,23 +148,28 @@ const Auth = () => {
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                       Connecting...
                     </div>
+                  ) : !isCivicConfigured ? (
+                    <>
+                      <Shield size={20} className="inline mr-2" />
+                      Configure Civic Auth First
+                    </>
                   ) : (
                     <>
                       <Shield size={20} className="inline mr-2" />
-                      Login with Civic Web2
+                      Login with Civic
                     </>
                   )}
                 </button>
 
                 <p className="text-xs text-neutral/50 mt-3">
-                  Secure authentication with email and social login
+                  Secure authentication with Civic Auth
                 </p>
               </div>
             ) : (
               <div className="text-center">
                 <button
-                  onClick={handleWeb3Login}
-                  disabled={loading}
+                  onClick={handleLogin}
+                  disabled={loading || !isCivicConfigured}
                   className="w-full bg-gradient-to-r from-secondary to-secondary/80 text-white py-4 px-6 rounded-lg font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {loading ? (
@@ -163,10 +177,15 @@ const Auth = () => {
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
                       Connecting...
                     </div>
+                  ) : !isCivicConfigured ? (
+                    <>
+                      <Wallet size={20} className="inline mr-2" />
+                      Configure Civic Auth First
+                    </>
                   ) : (
                     <>
                       <Wallet size={20} className="inline mr-2" />
-                      Connect Web3 Wallet
+                      Connect with Web3 Wallet
                     </>
                   )}
                 </button>

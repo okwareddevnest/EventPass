@@ -1,10 +1,11 @@
-# EventPass Frontend Production Configuration
-# Replace placeholder values with your actual production credentials
+# EventPass Frontend Environment Configuration
+# Copy this file to .env and replace placeholder values with actual credentials
 
 # API Configuration
-VITE_API_BASE_URL=https://eventpass-backend.onrender.com
+VITE_API_BASE_URL=http://localhost:5000
 
 # Civic Auth Configuration - Get from Civic Dashboard
+# IMPORTANT: Replace with your actual Civic Client ID from https://auth.civic.com
 VITE_CIVIC_CLIENT_ID=your_civic_client_id_from_dashboard
 
 # Application Configuration

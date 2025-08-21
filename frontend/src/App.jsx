@@ -2,8 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider, useNotification } from './contexts/NotificationContext';
-import { CivicAuthProvider } from '@civic/auth/react';
-import { CivicAuthProvider as CivicAuthWeb3Provider } from '@civic/auth-web3/react';
+import { CivicAuthProvider, UserButton } from '@civic/auth/react';
 import Navbar from './components/Navbar';
 import ParticlesBackground from './components/ParticlesBackground';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -33,62 +32,70 @@ const NotificationWrapper = () => {
 };
 
 function App() {
-  const civicConfig = {
-    clientId: import.meta.env.VITE_CIVIC_CLIENT_ID || 'your-civic-client-id',
-    redirectUri: window.location.origin + '/auth/callback',
-  };
+  // Check if Civic Auth is properly configured
+  const civicClientId = import.meta.env.VITE_CIVIC_CLIENT_ID;
+  const isCivicConfigured = civicClientId && civicClientId !== 'your_civic_client_id_from_dashboard';
 
-  const civicWeb3Config = {
-    ...civicConfig,
-    chain: 'ethereum', // or 'solana' based on your preference
-  };
+  // Log configuration status
+  if (!isCivicConfigured) {
+    console.warn('Civic Auth not configured. Please set VITE_CIVIC_CLIENT_ID in your environment variables.');
+    console.info('Visit https://auth.civic.com to get your Client ID');
+  }
 
-  return (
-    <CivicAuthProvider config={civicConfig}>
-      <CivicAuthWeb3Provider config={civicWeb3Config}>
-        <AuthProvider>
-          <NotificationProvider>
-            <Router>
-              <div className="min-h-screen bg-accent text-neutral">
-                <ParticlesBackground />
-                <Navbar />
-                <main className="container mx-auto px-4 py-8">
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/auth/callback" element={<AuthCallback />} />
-                    <Route path="/events" element={<Events />} />
-                    <Route path="/events/:id" element={<EventDetail />} />
-                    <Route path="/dashboard" element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/profile" element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/payment/callback" element={
-                      <ProtectedRoute>
-                        <PaymentCallback />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/checkin" element={
-                      <ProtectedRoute>
-                        <CheckIn />
-                      </ProtectedRoute>
-                    } />
-                  </Routes>
-                </main>
-                <NotificationWrapper />
-              </div>
-            </Router>
-          </NotificationProvider>
-        </AuthProvider>
-      </CivicAuthWeb3Provider>
-    </CivicAuthProvider>
+  // Render app content
+  const appContent = (
+    <AuthProvider>
+      <NotificationProvider>
+        <Router>
+          <div className="min-h-screen bg-accent text-neutral">
+            <ParticlesBackground />
+            <Navbar />
+            <main className="container mx-auto px-4 py-8">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/events" element={<Events />} />
+                <Route path="/events/:id" element={<EventDetail />} />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
+                <Route path="/payment/callback" element={
+                  <ProtectedRoute>
+                    <PaymentCallback />
+                  </ProtectedRoute>
+                } />
+                <Route path="/checkin" element={
+                  <ProtectedRoute>
+                    <CheckIn />
+                  </ProtectedRoute>
+                } />
+              </Routes>
+            </main>
+            <NotificationWrapper />
+          </div>
+        </Router>
+      </NotificationProvider>
+    </AuthProvider>
   );
+
+  // Wrap with Civic provider only if configured
+  if (isCivicConfigured) {
+    return (
+      <CivicAuthProvider clientId={civicClientId}>
+        {appContent}
+      </CivicAuthProvider>
+    );
+  }
+
+  return appContent;
 }
 
 export default App;

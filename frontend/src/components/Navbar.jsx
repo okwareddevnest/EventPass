@@ -2,19 +2,35 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { useUser, UserButton } from '@civic/auth/react';
 import { Menu, X, User, LogOut, Calendar, Home, BarChart3, QrCode } from 'lucide-react';
 
 const Navbar = () => {
+  const { user: civicUser, signOut } = useUser();
   const { user, isAuthenticated, logout, isOrganizer } = useAuth();
   const { info } = useNotification();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    info('Successfully logged out');
-    navigate('/');
-    setIsMobileMenuOpen(false);
+  // Use Civic Auth user if available, fallback to custom auth
+  const currentUser = civicUser || user;
+  const isLoggedIn = civicUser || isAuthenticated;
+
+  const handleLogout = async () => {
+    try {
+      if (civicUser) {
+        // Use Civic Auth signOut
+        await signOut();
+      } else {
+        // Use custom auth logout
+        logout();
+      }
+      info('Successfully logged out');
+      navigate('/');
+      setIsMobileMenuOpen(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const toggleMobileMenu = () => {
@@ -61,49 +77,36 @@ const Navbar = () => {
               <span>Events</span>
             </Link>
 
-            {isAuthenticated ? (
-              <>
-                {isOrganizer && (
-                  <>
-                    <Link
-                      to="/dashboard"
-                      className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
-                    >
-                      <BarChart3 size={18} />
-                      <span>Dashboard</span>
-                    </Link>
-                    <Link
-                      to="/checkin"
-                      className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
-                    >
-                      <QrCode size={18} />
-                      <span>Check-In</span>
-                    </Link>
-                  </>
-                )}
+            {/* Civic Auth User Button */}
+            <UserButton />
 
+            {/* Additional navigation for authenticated users */}
+            {isLoggedIn && isOrganizer && (
+              <>
                 <Link
-                  to="/profile"
+                  to="/dashboard"
                   className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
                 >
-                  <User size={18} />
-                  <span>Profile</span>
+                  <BarChart3 size={18} />
+                  <span>Dashboard</span>
                 </Link>
-
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center space-x-1 text-neutral hover:text-red-400 transition-colors duration-200"
+                <Link
+                  to="/checkin"
+                  className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
                 >
-                  <LogOut size={18} />
-                  <span>Logout</span>
-                </button>
+                  <QrCode size={18} />
+                  <span>Check-In</span>
+                </Link>
               </>
-            ) : (
+            )}
+
+            {isLoggedIn && (
               <Link
-                to="/auth"
-                className="bg-gradient-to-r from-primary to-secondary text-white px-6 py-2 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200"
+                to="/profile"
+                className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
               >
-                Login
+                <User size={18} />
+                <span>Profile</span>
               </Link>
             )}
           </div>
@@ -139,53 +142,41 @@ const Navbar = () => {
                 <span>Events</span>
               </Link>
 
-              {isAuthenticated ? (
-                <>
-                  {isOrganizer && (
-                    <>
-                      <Link
-                        to="/dashboard"
-                        className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
-                        onClick={closeMobileMenu}
-                      >
-                        <BarChart3 size={18} />
-                        <span>Dashboard</span>
-                      </Link>
-                      <Link
-                        to="/checkin"
-                        className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
-                        onClick={closeMobileMenu}
-                      >
-                        <QrCode size={18} />
-                        <span>Check-In</span>
-                      </Link>
-                    </>
-                  )}
+              {/* Civic Auth User Button for mobile */}
+              <div className="py-2">
+                <UserButton />
+              </div>
 
+              {/* Additional navigation for authenticated users */}
+              {isLoggedIn && isOrganizer && (
+                <>
                   <Link
-                    to="/profile"
+                    to="/dashboard"
                     className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
                     onClick={closeMobileMenu}
                   >
-                    <User size={18} />
-                    <span>Profile</span>
+                    <BarChart3 size={18} />
+                    <span>Dashboard</span>
                   </Link>
-
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center space-x-2 text-neutral hover:text-red-400 transition-colors duration-200 py-2 text-left"
+                  <Link
+                    to="/checkin"
+                    className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
+                    onClick={closeMobileMenu}
                   >
-                    <LogOut size={18} />
-                    <span>Logout</span>
-                  </button>
+                    <QrCode size={18} />
+                    <span>Check-In</span>
+                  </Link>
                 </>
-              ) : (
+              )}
+
+              {isLoggedIn && (
                 <Link
-                  to="/auth"
-                  className="bg-gradient-to-r from-primary to-secondary text-white px-6 py-2 rounded-lg hover:shadow-lg transition-all duration-200 text-center"
+                  to="/profile"
+                  className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
                   onClick={closeMobileMenu}
                 >
-                  Login
+                  <User size={18} />
+                  <span>Profile</span>
                 </Link>
               )}
             </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Calendar, Shield, Zap, Users } from 'lucide-react';
 import EventCard from '../components/EventCard';
+import { eventsAPI } from '../services/api';
 
 const Home = () => {
   const [featuredEvents, setFeaturedEvents] = useState([]);
@@ -14,13 +15,12 @@ const Home = () => {
 
   const fetchFeaturedEvents = async () => {
     try {
-      const response = await fetch('/api/events?limit=6');
-      if (response.ok) {
-        const data = await response.json();
-        setFeaturedEvents(data.events);
-      }
+      const data = await eventsAPI.getEvents({ limit: 6 });
+      setFeaturedEvents(data.events || []);
     } catch (error) {
       console.error('Error fetching featured events:', error);
+      // Set empty array on error to prevent crashes
+      setFeaturedEvents([]);
     } finally {
       setLoading(false);
     }
