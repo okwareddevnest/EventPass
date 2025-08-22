@@ -121,5 +121,29 @@ export const ticketsAPI = {
   validateTicket: (ticketId) => apiService.post(`/api/tickets/validate/${ticketId}`),
 };
 
+// Organization-specific API methods
+export const organizationsAPI = {
+  // Register as organization
+  register: (orgData) => apiService.post('/api/organizations/register', orgData),
+
+  // Upload organization logo
+  uploadLogo: (formData) => apiService.post('/api/organizations/upload/logo', formData),
+
+  // Get organization profile
+  getProfile: () => apiService.get('/api/organizations/profile'),
+
+  // Update organization profile
+  updateProfile: (profileData) => apiService.put('/api/organizations/profile', profileData),
+
+  // Get pending approvals (admin only)
+  getPendingApprovals: (params = {}) => apiService.get('/api/organizations/pending-approvals', params),
+
+  // Approve organization (admin only)
+  approveOrganization: (userId) => apiService.put(`/api/organizations/${userId}/approve`),
+
+  // Reject organization (admin only)
+  rejectOrganization: (userId, reason) => apiService.put(`/api/organizations/${userId}/reject`, { reason }),
+};
+
 // Default export
 export default apiService;

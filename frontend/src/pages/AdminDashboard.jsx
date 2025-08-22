@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import OrganizationApproval from '../components/OrganizationApproval';
 import {
   Users as UsersIcon,
   UserPlus,
@@ -279,6 +280,7 @@ const AdminDashboard = () => {
         {[
           { id: 'overview', label: 'Overview', icon: BarChart3 },
           { id: 'userManagement', label: 'User Management', icon: UsersIcon },
+          { id: 'organizations', label: 'Organizations', icon: Shield },
           { id: 'roleRequests', label: 'Role Requests', icon: FileText },
           { id: 'system', label: 'System Monitor', icon: Server },
         ].map((tab) => (
@@ -497,6 +499,13 @@ const AdminDashboard = () => {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Organizations Tab */}
+      {activeTab === 'organizations' && (
+        <div className="space-y-6">
+          <OrganizationApproval />
         </div>
       )}
 

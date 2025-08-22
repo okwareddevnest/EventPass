@@ -76,6 +76,22 @@ const isOrganizer = (req, res, next) => {
   next();
 };
 
+// Check if user is organization
+const isOrganization = (req, res, next) => {
+  if (req.user.role !== 'organization') {
+    return res.status(403).json({ message: 'Access denied. Organization role required.' });
+  }
+  next();
+};
+
+// Check if user is approved organization
+const isApprovedOrganization = (req, res, next) => {
+  if (req.user.role !== 'organization' || !req.user.organizationDetails?.isApproved) {
+    return res.status(403).json({ message: 'Access denied. Approved organization required.' });
+  }
+  next();
+};
+
 // Check if user is admin (highest level)
 const isAdmin = (req, res, next) => {
   if (req.user.role !== 'admin') {
@@ -116,6 +132,8 @@ const generateToken = (user) => {
 module.exports = {
   authenticateToken,
   isOrganizer,
+  isOrganization,
+  isApprovedOrganization,
   isOwner,
   isAdmin,
   isOrganizerOrAdmin,

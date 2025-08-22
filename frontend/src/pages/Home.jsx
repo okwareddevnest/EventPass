@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Calendar, Shield, Zap, Users } from 'lucide-react';
+import { ArrowRight, Calendar, Shield, Zap, Users, Building } from 'lucide-react';
 import EventCard from '../components/EventCard';
+import OrganizationRegistrationModal from '../components/OrganizationRegistrationModal';
 import { eventsAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home = () => {
+  const { user, isAuthenticated } = useAuth();
   const [featuredEvents, setFeaturedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showOrgModal, setShowOrgModal] = useState(false);
 
   useEffect(() => {
     // Fetch featured events
@@ -48,12 +52,38 @@ const Home = () => {
             >
               Explore Events
             </Link>
-            <Link
-              to="/auth"
-              className="border border-white/20 text-neutral px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white/5 transition-all duration-200"
-            >
-              Create Event
-            </Link>
+            {isAuthenticated ? (
+              user?.role === 'organization' ? (
+                <Link
+                  to="/organization"
+                  className="border border-white/20 text-neutral px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white/5 transition-all duration-200"
+                >
+                  Manage Events
+                </Link>
+              ) : user?.role === 'attendee' ? (
+                <button
+                  onClick={() => setShowOrgModal(true)}
+                  className="border border-white/20 text-neutral px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white/5 transition-all duration-200 flex items-center"
+                >
+                  <Building size={20} className="mr-2" />
+                  Become Organizer
+                </button>
+              ) : (
+                <Link
+                  to="/dashboard"
+                  className="border border-white/20 text-neutral px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white/5 transition-all duration-200"
+                >
+                  Dashboard
+                </Link>
+              )
+            ) : (
+              <Link
+                to="/auth"
+                className="border border-white/20 text-neutral px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white/5 transition-all duration-200"
+              >
+                Create Event
+              </Link>
+            )}
           </div>
 
           {/* Features */}
@@ -157,6 +187,13 @@ const Home = () => {
           </Link>
         </div>
       </section>
+
+      {/* Organization Registration Modal */}
+      <OrganizationRegistrationModal
+        isOpen={showOrgModal}
+        onClose={() => setShowOrgModal(false)}
+        userEmail={user?.email}
+      />
     </div>
   );
 };

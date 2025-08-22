@@ -98,6 +98,8 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     isAuthenticated,
     isOrganizer: currentUser?.role === 'organizer',
+    isOrganization: currentUser?.role === 'organization',
+    isApprovedOrganization: currentUser?.role === 'organization' && currentUser?.organizationDetails?.isApproved,
     isCivicUser: !!civicUser,
   };
 
