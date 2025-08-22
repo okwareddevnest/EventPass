@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import apiService from '../services/api';
 
 const AuthCallback = () => {
   const [searchParams] = useSearchParams();
@@ -36,45 +37,31 @@ const AuthCallback = () => {
         return;
       }
 
-      // Exchange the authorization code for tokens
-      const response = await fetch('/api/auth/callback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          code,
-          state,
-        }),
+      // Exchange the authorization code for tokens using the API service
+      const data = await apiService.post('/api/auth/callback', {
+        code,
+        state,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Login with the received user data
-        const result = await login(data.token, {
-          civicId: data.user.civicId,
-          name: data.user.name,
-          email: data.user.email,
-          walletAddress: data.user.walletAddress,
-        });
+      // Login with the received user data
+      const result = await login(data.token, {
+        civicId: data.user.civicId,
+        name: data.user.name,
+        email: data.user.email,
+        walletAddress: data.user.walletAddress,
+      });
 
-        if (result.success) {
-          setStatus('success');
-          success('Successfully authenticated with Civic!');
-          
-          // Redirect to dashboard or intended page
-          setTimeout(() => {
-            navigate('/dashboard', { replace: true });
-          }, 2000);
-        } else {
-          setStatus('failed');
-          setErrorMessage(result.error || 'Failed to complete authentication');
-        }
+      if (result.success) {
+        setStatus('success');
+        success('Successfully authenticated with Civic!');
+
+        // Redirect to dashboard or intended page
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+        }, 2000);
       } else {
-        const errorData = await response.json();
         setStatus('failed');
-        setErrorMessage(errorData.message || 'Authentication callback failed');
+        setErrorMessage(result.error || 'Failed to complete authentication');
       }
     } catch (err) {
       console.error('Auth callback error:', err);

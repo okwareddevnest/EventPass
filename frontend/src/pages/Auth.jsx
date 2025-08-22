@@ -45,15 +45,41 @@ const Auth = () => {
     }
 
     try {
-      // Use Civic Auth sign-in (handles both Web2 and Web3 based on user selection)
-      await signIn();
+      console.log('Starting Civic Auth with method:', authMethod);
+      console.log('Current domain:', window.location.origin);
+
+      // Use Civic Auth sign-in with specific configuration for production
+      const authConfig = {
+        redirectUri: `${window.location.origin}/auth/callback`,
+        scope: ['openid', 'profile', 'email'],
+      };
+
+      console.log('Auth config:', authConfig);
+
+      await signIn(authConfig);
 
       // The user will be redirected to Civic Auth
       // After successful authentication, they'll be redirected back to /auth/callback
       // where we'll handle the token exchange and user creation
     } catch (err) {
       console.error('Login error:', err);
-      error('Failed to authenticate with Civic');
+      console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      });
+
+      // Provide more specific error messages
+      if (err.message?.includes('popup')) {
+        error('Popup blocked. Please allow popups for this site and try again.');
+      } else if (err.message?.includes('network')) {
+        error('Network error. Please check your internet connection and try again.');
+      } else if (err.message?.includes('origin')) {
+        error('Configuration error. Please contact support if this persists.');
+      } else {
+        error(`Authentication failed: ${err.message || 'Unknown error'}`);
+      }
+
       setLoading(false);
     }
   };

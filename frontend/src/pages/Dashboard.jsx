@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import apiService, { ticketsAPI, eventsAPI } from '../services/api';
 import {
   Plus,
   Calendar,
@@ -62,30 +63,34 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-      // Fetch organizer's events
-      const eventsResponse = await fetch('/api/events/organizer/events', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (eventsResponse.ok) {
-        const eventsData = await eventsResponse.json();
-        setEvents(eventsData.events);
-
-        // Calculate stats
-        const totalEvents = eventsData.events.length;
-        const totalAttendees = eventsData.events.reduce((sum, event) => sum + event.currentAttendees, 0);
-        const totalRevenue = eventsData.events.reduce((sum, event) => sum + (event.currentAttendees * event.price), 0);
-        const activeEvents = eventsData.events.filter(event => event.status === 'published').length;
-
+      // Only fetch organizer data if user is authenticated and is an organizer
+      if (!isAuthenticated || !isOrganizer) {
+        setEvents([]);
         setStats({
-          totalEvents,
-          totalAttendees,
-          totalRevenue,
-          activeEvents,
+          totalEvents: 0,
+          totalAttendees: 0,
+          totalRevenue: 0,
+          activeEvents: 0,
         });
+        return;
       }
+
+      // Fetch organizer's events using the API service
+      const eventsData = await eventsAPI.getOrganizerEvents();
+      setEvents(eventsData.events);
+
+      // Calculate stats
+      const totalEvents = eventsData.events.length;
+      const totalAttendees = eventsData.events.reduce((sum, event) => sum + event.currentAttendees, 0);
+      const totalRevenue = eventsData.events.reduce((sum, event) => sum + (event.currentAttendees * event.price), 0);
+      const activeEvents = eventsData.events.filter(event => event.status === 'published').length;
+
+      setStats({
+        totalEvents,
+        totalAttendees,
+        totalRevenue,
+        activeEvents,
+      });
     } catch (err) {
       console.error('Error fetching organizer data:', err);
       error('Failed to load dashboard data');
@@ -98,20 +103,25 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-      // Fetch user's tickets
-      const ticketsResponse = await fetch('/api/tickets/my-tickets', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      // Only fetch tickets if user is authenticated
+      if (!isAuthenticated) {
+        setTickets([]);
+        setUserStats({
+          totalTickets: 0,
+          validTickets: 0,
+          totalSpent: 0,
+          upcomingEvents: 0,
+        });
+        return;
+      }
 
-      if (ticketsResponse.ok) {
-        const ticketsData = await ticketsResponse.json();
-        setTickets(ticketsData.tickets);
+      // Fetch user's tickets using the API service
+      const ticketsData = await ticketsAPI.getUserTickets();
+      setTickets(ticketsData.tickets);
 
-        // Calculate user stats
-        const totalTickets = ticketsData.tickets.length;
-        const validTickets = ticketsData.tickets.filter(ticket => ticket.status === 'valid').length;
+      // Calculate user stats
+      const totalTickets = ticketsData.tickets.length;
+      const validTickets = ticketsData.tickets.filter(ticket => ticket.status === 'valid').length;
         const totalSpent = ticketsData.tickets.reduce((sum, ticket) => sum + ticket.price, 0);
 
         // Calculate upcoming events (events with future dates)
@@ -128,10 +138,6 @@ const Dashboard = () => {
           upcomingEvents,
           totalSpent,
         });
-      } else if (ticketsResponse.status === 401) {
-        console.error('Authentication required for user dashboard');
-        error('Please log in to view your dashboard');
-      }
     } catch (err) {
       console.error('Error fetching user data:', err);
       error('Failed to load dashboard data');
@@ -142,16 +148,14 @@ const Dashboard = () => {
 
   const fetchRoleRequests = async () => {
     try {
-      const response = await fetch('/api/role-requests/my-requests', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setRoleRequests(data.roleRequests);
+      // Only fetch role requests if user is authenticated
+      if (!isAuthenticated) {
+        setRoleRequests([]);
+        return;
       }
+
+      const data = await apiService.get('/api/role-requests/my-requests');
+      setRoleRequests(data.roleRequests);
     } catch (err) {
       console.error('Error fetching role requests:', err);
     }
@@ -164,16 +168,9 @@ const Dashboard = () => {
     }
 
     try {
-      const response = await fetch('/api/role-requests', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(roleRequestForm),
-      });
+      const data = await apiService.post('/api/role-requests', roleRequestForm);
 
-      if (response.ok) {
+      if (data) {
         success('Role request submitted successfully');
         setShowRoleRequestForm(false);
         setRoleRequestForm({ requestedRole: 'admin', reason: '' });
@@ -194,20 +191,10 @@ const Dashboard = () => {
     }
 
     try {
-      const response = await fetch(`/api/role-requests/${requestId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const data = await apiService.delete(`/api/role-requests/${requestId}`);
 
-      if (response.ok) {
-        success('Role request cancelled successfully');
-        fetchRoleRequests(); // Refresh the list
-      } else {
-        const errorData = await response.json();
-        error(errorData.message || 'Failed to cancel role request');
-      }
+      success('Role request cancelled successfully');
+      fetchRoleRequests(); // Refresh the list
     } catch (err) {
       console.error('Error cancelling role request:', err);
       error('Failed to cancel role request');
@@ -220,14 +207,9 @@ const Dashboard = () => {
     }
 
     try {
-      const response = await fetch(`/api/events/${eventId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      const data = await eventsAPI.deleteEvent(eventId);
 
-      if (response.ok) {
+      if (data) {
         setEvents(events.filter(event => event._id !== eventId));
         // Update stats
         const deletedEvent = events.find(event => event._id === eventId);
