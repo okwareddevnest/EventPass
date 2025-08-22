@@ -17,7 +17,7 @@ import {
   CheckCircle,
   Crown,
   Shield,
-  UserUp,
+  ArrowBigUp,
   FileText,
   X,
   Check
@@ -663,7 +663,7 @@ const Dashboard = () => {
                 onClick={() => setShowRoleRequestForm(true)}
                 className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center space-x-2"
               >
-                <UserUp size={16} />
+                <ArrowBigUp size={16} />
                 <span>Request Admin Role</span>
               </button>
             </div>
@@ -750,7 +750,7 @@ const RoleRequestModal = ({ isOpen, onClose, formData, setFormData, onSubmit }) 
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-md">
         <h3 className="text-xl font-bold text-neutral mb-4 flex items-center space-x-2">
-          <UserUp size={20} className="text-purple-400" />
+          <ArrowBigUp size={20} className="text-purple-400" />
           <span>Request Admin Role</span>
         </h3>
 
