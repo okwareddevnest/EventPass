@@ -87,8 +87,10 @@ router.post('/register', authenticateToken, async (req, res) => {
 
     await user.save();
 
-    // Create deposit payment URL (you'll need to implement this based on your payment system)
-    const paymentUrl = await createDepositPaymentUrl(user, parseFloat(depositAmount) || 100);
+    // For now, skip payment URL creation to avoid complex dependencies
+    // TODO: Implement payment URL creation when Pesapal is fully configured
+    const paymentUrl = null;
+    console.log(`✅ Organization registration completed for ${user.organizationDetails.orgName}`);
 
     res.status(201).json({
       message: 'Organization registration submitted successfully',
@@ -108,7 +110,7 @@ router.post('/register', authenticateToken, async (req, res) => {
   }
 });
 
-// Upload organization logo
+// Upload organization logo (optional)
 router.post('/upload/logo', authenticateToken, upload.single('logo'), async (req, res) => {
   try {
     if (!req.file) {
@@ -116,6 +118,13 @@ router.post('/upload/logo', authenticateToken, upload.single('logo'), async (req
     }
 
     const logoUrl = `/uploads/logos/${req.file.filename}`;
+
+    // Update user's organization logo
+    const user = await User.findOne({ civicId: req.user.civicId, isActive: true });
+    if (user && user.role === 'organization') {
+      user.organizationDetails.orgLogo = logoUrl;
+      await user.save();
+    }
 
     res.json({
       message: 'Logo uploaded successfully',

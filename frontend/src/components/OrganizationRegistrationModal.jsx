@@ -43,11 +43,16 @@ const OrganizationRegistrationModal = ({ isOpen, onClose, userEmail }) => {
       // Upload logo if provided
       let logoUrl = null;
       if (formData.orgLogo) {
-        const formDataWithFile = new FormData();
-        formDataWithFile.append('logo', formData.orgLogo);
+        try {
+          const formDataWithFile = new FormData();
+          formDataWithFile.append('logo', formData.orgLogo);
 
-        const uploadResponse = await organizationsAPI.uploadLogo(formDataWithFile);
-        logoUrl = uploadResponse.logoUrl;
+          const uploadResponse = await organizationsAPI.uploadLogo(formDataWithFile);
+          logoUrl = uploadResponse.logoUrl;
+        } catch (uploadError) {
+          console.warn('Logo upload failed, continuing without logo:', uploadError);
+          // Continue registration without logo
+        }
       }
 
       // Submit organization registration
@@ -63,8 +68,14 @@ const OrganizationRegistrationModal = ({ isOpen, onClose, userEmail }) => {
 
       const response = await organizationsAPI.register(registrationData);
 
-      // Redirect to deposit payment
-      window.location.href = response.paymentUrl;
+      // Show success message and close modal
+      alert('Organization registration submitted successfully! An admin will review your application.');
+      onClose();
+
+      // If payment URL exists, redirect to payment
+      if (response.paymentUrl) {
+        window.location.href = response.paymentUrl;
+      }
 
     } catch (err) {
       console.error('Organization registration error:', err);
