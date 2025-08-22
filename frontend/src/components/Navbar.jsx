@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useUser } from '@civic/auth/react';
-import { Menu, X, User, LogOut, Calendar, Home, BarChart3, QrCode, Shield, Crown } from 'lucide-react';
+import { Menu, X, User, LogOut, Calendar, Home, BarChart3, QrCode, Shield, Crown, Users as UsersIcon } from 'lucide-react';
 
 const Navbar = () => {
   const { signOut } = useUser();
@@ -39,7 +39,7 @@ const Navbar = () => {
     const getRoleIcon = () => {
       if (user.role === 'admin') return <Crown size={12} className="text-red-400" />;
       if (isOrganizer) return <Shield size={12} className="text-yellow-400" />;
-      return <Users size={12} className="text-blue-400" />;
+      return <UsersIcon size={12} className="text-blue-400" />;
     };
 
     const getRoleText = () => {

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import {
-  Users,
+  Users as UsersIcon,
   UserPlus,
   Shield,
   Crown,
@@ -237,7 +237,7 @@ const AdminDashboard = () => {
       <div className="flex space-x-1 bg-white/5 p-1 rounded-lg">
         {[
           { id: 'overview', label: 'Overview', icon: BarChart3 },
-          { id: 'users', label: 'User Management', icon: Users },
+          { id: 'userManagement', label: 'User Management', icon: UsersIcon },
           { id: 'system', label: 'System Monitor', icon: Server },
         ].map((tab) => (
           <button
@@ -268,7 +268,7 @@ const AdminDashboard = () => {
                     {(stats.attendee || 0) + (stats.organizer || 0) + (stats.admin || 0)}
                   </p>
                 </div>
-                <Users size={32} className="text-primary" />
+                <UsersIcon size={32} className="text-primary" />
               </div>
             </div>
 
@@ -360,7 +360,7 @@ const AdminDashboard = () => {
       )}
 
       {/* Users Tab */}
-      {activeTab === 'users' && (
+      {activeTab === 'userManagement' && (
         <div className="space-y-6">
           {/* Filters */}
           <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
@@ -411,7 +411,7 @@ const AdminDashboard = () => {
             <div className="divide-y divide-white/10">
               {filteredUsers.length === 0 ? (
                 <div className="p-12 text-center">
-                  <Users size={48} className="text-neutral/30 mx-auto mb-4" />
+                  <UsersIcon size={48} className="text-neutral/30 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-neutral mb-2">No users found</h3>
                   <p className="text-neutral/70">Try adjusting your search or filter criteria</p>
                 </div>
@@ -429,7 +429,7 @@ const AdminDashboard = () => {
                           }`}>
                             {user.role === 'admin' && <Crown size={10} />}
                             {user.role === 'organizer' && <Shield size={10} />}
-                            {user.role === 'attendee' && <Users size={10} />}
+                            {user.role === 'attendee' && <UsersIcon size={10} />}
                             <span className="capitalize">{user.role}</span>
                           </div>
                           <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium border ${
