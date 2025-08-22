@@ -39,6 +39,9 @@ const AdminDashboard = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreateUser, setShowCreateUser] = useState(false);
+  const [roleRequests, setRoleRequests] = useState([]);
+  const [showRoleRequestModal, setShowRoleRequestModal] = useState(false);
+  const [selectedRoleRequest, setSelectedRoleRequest] = useState(null);
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -73,6 +76,18 @@ const AdminDashboard = () => {
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
         setSystemStats(statsData);
+      }
+
+      // Fetch role requests
+      const roleRequestsResponse = await fetch('/api/admin/role-requests', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (roleRequestsResponse.ok) {
+        const roleRequestsData = await roleRequestsResponse.json();
+        setRoleRequests(roleRequestsData.roleRequests);
       }
 
     } catch (err) {
@@ -157,6 +172,32 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleRoleRequestReview = async (requestId, status, reviewNotes = '') => {
+    try {
+      const response = await fetch(`/api/admin/role-requests/${requestId}/review`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status, reviewNotes }),
+      });
+
+      if (response.ok) {
+        success(`Role request ${status} successfully`);
+        setShowRoleRequestModal(false);
+        setSelectedRoleRequest(null);
+        fetchDashboardData(); // Refresh data
+      } else {
+        const errorData = await response.json();
+        showError(errorData.message || `Failed to ${status} role request`);
+      }
+    } catch (err) {
+      console.error('Error reviewing role request:', err);
+      showError(`Failed to ${status} role request`);
+    }
+  };
+
   const filteredUsers = userList.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -238,6 +279,7 @@ const AdminDashboard = () => {
         {[
           { id: 'overview', label: 'Overview', icon: BarChart3 },
           { id: 'userManagement', label: 'User Management', icon: UsersIcon },
+          { id: 'roleRequests', label: 'Role Requests', icon: FileText },
           { id: 'system', label: 'System Monitor', icon: Server },
         ].map((tab) => (
           <button
@@ -354,6 +396,105 @@ const AdminDashboard = () => {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Requests Tab */}
+      {activeTab === 'roleRequests' && (
+        <div className="space-y-6">
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
+            <div className="p-6 border-b border-white/10">
+              <h2 className="text-xl font-bold text-neutral">Role Requests Management</h2>
+              <p className="text-neutral/70">Review and manage role escalation requests</p>
+            </div>
+
+            <div className="divide-y divide-white/10">
+              {roleRequests.length === 0 ? (
+                <div className="p-12 text-center">
+                  <FileText size={48} className="text-neutral/30 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-neutral mb-2">No role requests</h3>
+                  <p className="text-neutral/70">No pending role requests to review</p>
+                </div>
+              ) : (
+                roleRequests.map((request) => (
+                  <div key={request._id} className="p-6 hover:bg-white/5 transition-colors duration-200">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="text-lg font-semibold text-neutral">
+                            {request.userId?.name || 'Unknown User'}
+                          </h3>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            request.status === 'pending' ? 'bg-yellow-500/20 text-yellow-200' :
+                            request.status === 'approved' ? 'bg-green-500/20 text-green-200' :
+                            'bg-red-500/20 text-red-200'
+                          }`}>
+                            {request.status}
+                          </span>
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-200">
+                            Requesting: {request.requestedRole}
+                          </span>
+                        </div>
+
+                        <p className="text-neutral/70 text-sm mb-2">{request.reason}</p>
+
+                        <div className="flex items-center space-x-4 text-sm text-neutral/60">
+                          <span>Requested: {new Date(request.createdAt).toLocaleDateString()}</span>
+                          {request.reviewedAt && (
+                            <span>Reviewed: {new Date(request.reviewedAt).toLocaleDateString()}</span>
+                          )}
+                        </div>
+
+                        {request.reviewNotes && (
+                          <div className="mt-3 p-3 bg-white/5 rounded-lg">
+                            <p className="text-sm text-neutral/70">
+                              <strong>Review Notes:</strong> {request.reviewNotes}
+                            </p>
+                            {request.reviewedBy && (
+                              <p className="text-xs text-neutral/50 mt-1">
+                                Reviewed by: {request.reviewedBy.name}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center space-x-2 ml-4">
+                        {request.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedRoleRequest(request);
+                                setShowRoleRequestModal(true);
+                              }}
+                              className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors duration-200"
+                              title="Review Request"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleRoleRequestReview(request._id, 'approved')}
+                              className="p-2 text-green-400 hover:bg-green-500/20 rounded-lg transition-colors duration-200"
+                              title="Approve Request"
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleRoleRequestReview(request._id, 'rejected')}
+                              className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors duration-200"
+                              title="Reject Request"
+                            >
+                              <X size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -555,6 +696,18 @@ const AdminDashboard = () => {
           }}
         />
       )}
+
+      {/* Role Request Review Modal */}
+      {showRoleRequestModal && selectedRoleRequest && (
+        <RoleRequestReviewModal
+          roleRequest={selectedRoleRequest}
+          onClose={() => {
+            setShowRoleRequestModal(false);
+            setSelectedRoleRequest(null);
+          }}
+          onReview={handleRoleRequestReview}
+        />
+      )}
     </div>
   );
 };
@@ -688,6 +841,110 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+};
+
+// Role Request Review Modal Component
+const RoleRequestReviewModal = ({ roleRequest, onClose, onReview }) => {
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleApprove = async () => {
+    setLoading(true);
+    try {
+      await onReview(roleRequest._id, 'approved', reviewNotes);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    setLoading(true);
+    try {
+      await onReview(roleRequest._id, 'rejected', reviewNotes);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-2xl">
+        <h3 className="text-xl font-bold text-neutral mb-4 flex items-center space-x-2">
+          <FileText size={20} className="text-blue-400" />
+          <span>Review Role Request</span>
+        </h3>
+
+        <div className="space-y-4">
+          {/* Request Details */}
+          <div className="bg-white/5 rounded-lg p-4">
+            <h4 className="font-semibold text-neutral mb-2">Request Details</h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-neutral/70">User:</span>
+                <p className="text-neutral font-medium">{roleRequest.userId?.name}</p>
+                <p className="text-neutral/70 text-xs">{roleRequest.userId?.email}</p>
+              </div>
+              <div>
+                <span className="text-neutral/70">Current Role:</span>
+                <p className="text-neutral font-medium capitalize">{roleRequest.userId?.role}</p>
+              </div>
+              <div className="col-span-2">
+                <span className="text-neutral/70">Requested Role:</span>
+                <p className="text-neutral font-medium capitalize">{roleRequest.requestedRole}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Request Reason */}
+          <div className="bg-white/5 rounded-lg p-4">
+            <h4 className="font-semibold text-neutral mb-2">Reason for Request</h4>
+            <p className="text-neutral/70 text-sm">{roleRequest.reason}</p>
+          </div>
+
+          {/* Review Notes */}
+          <div>
+            <label className="block text-sm font-medium text-neutral/70 mb-2">
+              Review Notes (Optional)
+            </label>
+            <textarea
+              value={reviewNotes}
+              onChange={(e) => setReviewNotes(e.target.value)}
+              placeholder="Add notes about your decision..."
+              rows={3}
+              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex space-x-4 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-3 border border-white/20 text-neutral rounded-lg hover:bg-white/5 transition-all duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleReject}
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-red-500/20 border border-red-500/30 text-red-200 rounded-lg hover:bg-red-500/30 transition-all duration-200 disabled:opacity-50"
+            >
+              {loading ? 'Processing...' : 'Reject Request'}
+            </button>
+            <button
+              type="button"
+              onClick={handleApprove}
+              disabled={loading}
+              className="flex-1 px-6 py-3 bg-green-500/20 border border-green-500/30 text-green-200 rounded-lg hover:bg-green-500/30 transition-all duration-200 disabled:opacity-50"
+            >
+              {loading ? 'Processing...' : 'Approve Request'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

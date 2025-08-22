@@ -47,8 +47,6 @@ const userSchema = new mongoose.Schema({
 });
 
 // Index for better query performance
-userSchema.index({ email: 1 });
-userSchema.index({ civicId: 1 });
-userSchema.index({ role: 1 });
+// Note: email and civicId are already indexed with unique: true above
 
 module.exports = mongoose.model('User', userSchema);

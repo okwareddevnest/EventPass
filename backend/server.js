@@ -107,6 +107,7 @@ app.use('/api/events', require('./routes/events'));
 app.use('/api/tickets', require('./routes/tickets'));
 app.use('/api/pesapal', require('./routes/pesapal'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/role-requests', require('./routes/roleRequests'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

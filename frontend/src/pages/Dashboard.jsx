@@ -16,7 +16,11 @@ import {
   Clock,
   CheckCircle,
   Crown,
-  Shield
+  Shield,
+  UserUp,
+  FileText,
+  X,
+  Check
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -38,10 +42,17 @@ const Dashboard = () => {
     upcomingEvents: 0,
     totalSpent: 0,
   });
+  const [roleRequests, setRoleRequests] = useState([]);
+  const [showRoleRequestForm, setShowRoleRequestForm] = useState(false);
+  const [roleRequestForm, setRoleRequestForm] = useState({
+    requestedRole: 'admin',
+    reason: ''
+  });
 
   useEffect(() => {
     if (user?.role === 'organizer') {
       fetchOrganizerData();
+      fetchRoleRequests();
     } else {
       fetchUserData();
     }
@@ -126,6 +137,80 @@ const Dashboard = () => {
       error('Failed to load dashboard data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRoleRequests = async () => {
+    try {
+      const response = await fetch('/api/role-requests/my-requests', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setRoleRequests(data.roleRequests);
+      }
+    } catch (err) {
+      console.error('Error fetching role requests:', err);
+    }
+  };
+
+  const submitRoleRequest = async () => {
+    if (!roleRequestForm.reason.trim()) {
+      error('Please provide a reason for your role request');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/role-requests', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(roleRequestForm),
+      });
+
+      if (response.ok) {
+        success('Role request submitted successfully');
+        setShowRoleRequestForm(false);
+        setRoleRequestForm({ requestedRole: 'admin', reason: '' });
+        fetchRoleRequests(); // Refresh the list
+      } else {
+        const errorData = await response.json();
+        error(errorData.message || 'Failed to submit role request');
+      }
+    } catch (err) {
+      console.error('Error submitting role request:', err);
+      error('Failed to submit role request');
+    }
+  };
+
+  const cancelRoleRequest = async (requestId) => {
+    if (!confirm('Are you sure you want to cancel this role request?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/role-requests/${requestId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (response.ok) {
+        success('Role request cancelled successfully');
+        fetchRoleRequests(); // Refresh the list
+      } else {
+        const errorData = await response.json();
+        error(errorData.message || 'Failed to cancel role request');
+      }
+    } catch (err) {
+      console.error('Error cancelling role request:', err);
+      error('Failed to cancel role request');
     }
   };
 
@@ -568,6 +653,161 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Role Request Section */}
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden">
+          <div className="p-6 border-b border-white/10">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-neutral">Role Requests</h2>
+              <button
+                onClick={() => setShowRoleRequestForm(true)}
+                className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200 flex items-center space-x-2"
+              >
+                <UserUp size={16} />
+                <span>Request Admin Role</span>
+              </button>
+            </div>
+            <p className="text-neutral/70">Manage your role escalation requests</p>
+          </div>
+
+          <div className="p-6">
+            {roleRequests.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText size={48} className="text-neutral/30 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-neutral mb-2">No role requests yet</h3>
+                <p className="text-neutral/70 mb-4">Submit a request to be promoted to admin</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {roleRequests.map((request) => (
+                  <div key={request._id} className="bg-white/5 rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <h4 className="font-semibold text-neutral">
+                            Request for {request.requestedRole} role
+                          </h4>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            request.status === 'pending' ? 'bg-yellow-500/20 text-yellow-200' :
+                            request.status === 'approved' ? 'bg-green-500/20 text-green-200' :
+                            'bg-red-500/20 text-red-200'
+                          }`}>
+                            {request.status}
+                          </span>
+                        </div>
+                        <p className="text-neutral/70 text-sm mb-2">{request.reason}</p>
+                        <p className="text-neutral/50 text-xs">
+                          Submitted: {new Date(request.createdAt).toLocaleDateString()}
+                        </p>
+                        {request.reviewNotes && (
+                          <p className="text-neutral/70 text-sm mt-2 italic">
+                            Review: {request.reviewNotes}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {request.status === 'pending' && (
+                          <button
+                            onClick={() => cancelRoleRequest(request._id)}
+                            className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors duration-200"
+                            title="Cancel Request"
+                          >
+                            <X size={16} />
+                          </button>
+                        )}
+                        {request.status === 'approved' && (
+                          <div className="p-2 text-green-400">
+                            <Check size={16} />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Role Request Modal */}
+        <RoleRequestModal
+          isOpen={showRoleRequestForm}
+          onClose={() => setShowRoleRequestForm(false)}
+          formData={roleRequestForm}
+          setFormData={setRoleRequestForm}
+          onSubmit={submitRoleRequest}
+        />
+      </div>
+    </div>
+  );
+};
+
+// Role Request Modal Component
+const RoleRequestModal = ({ isOpen, onClose, formData, setFormData, onSubmit }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold text-neutral mb-4 flex items-center space-x-2">
+          <UserUp size={20} className="text-purple-400" />
+          <span>Request Admin Role</span>
+        </h3>
+
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-neutral/70 mb-2">
+              Requested Role
+            </label>
+            <select
+              value={formData.requestedRole}
+              onChange={(e) => setFormData({ ...formData, requestedRole: e.target.value })}
+              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            >
+              <option value="admin">System Administrator</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral/70 mb-2">
+              Reason for Request *
+            </label>
+            <textarea
+              value={formData.reason}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              placeholder="Please explain why you need admin privileges..."
+              rows={4}
+              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none"
+              required
+            />
+            <p className="text-xs text-neutral/50 mt-1">
+              Maximum 1000 characters. Be specific about your needs.
+            </p>
+          </div>
+
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+            <p className="text-xs text-blue-200">
+              <strong>Note:</strong> Your request will be reviewed by the system administrator.
+              You'll be notified once a decision is made.
+            </p>
+          </div>
+
+          <div className="flex space-x-4 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-3 border border-white/20 text-neutral rounded-lg hover:bg-white/5 transition-all duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200"
+            >
+              Submit Request
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const Event = require('../models/Event');
 const Ticket = require('../models/Ticket');
+const RoleRequest = require('../models/RoleRequest');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 
 // Apply authentication and admin middleware to all routes
@@ -390,6 +391,107 @@ router.post('/create-user', async (req, res) => {
       return res.status(409).json({ message: 'User with this email already exists' });
     }
 
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Get all role requests (admin only)
+router.get('/role-requests', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, status } = req.query;
+
+    let query = {};
+    if (status) {
+      query.status = status;
+    }
+
+    const roleRequests = await RoleRequest.find(query)
+      .populate('userId', 'name email role createdAt')
+      .populate('reviewedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await RoleRequest.countDocuments(query);
+
+    res.json({
+      roleRequests,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalRequests: total,
+        hasNext: page * limit < total,
+        hasPrev: page > 1,
+      },
+    });
+  } catch (error) {
+    console.error('Get role requests error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Get single role request
+router.get('/role-requests/:id', async (req, res) => {
+  try {
+    const roleRequest = await RoleRequest.findById(req.params.id)
+      .populate('userId', 'name email role createdAt')
+      .populate('reviewedBy', 'name email');
+
+    if (!roleRequest) {
+      return res.status(404).json({ message: 'Role request not found' });
+    }
+
+    res.json({ roleRequest });
+  } catch (error) {
+    console.error('Get role request error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Review role request (approve/reject)
+router.put('/role-requests/:id/review', async (req, res) => {
+  try {
+    const { status, reviewNotes } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Must be approved or rejected.' });
+    }
+
+    const roleRequest = await RoleRequest.findById(req.params.id);
+
+    if (!roleRequest) {
+      return res.status(404).json({ message: 'Role request not found' });
+    }
+
+    if (roleRequest.status !== 'pending') {
+      return res.status(400).json({ message: 'Role request has already been reviewed' });
+    }
+
+    // Update the role request
+    roleRequest.status = status;
+    roleRequest.reviewedBy = req.user._id;
+    roleRequest.reviewNotes = reviewNotes || '';
+    roleRequest.reviewedAt = new Date();
+
+    await roleRequest.save();
+
+    // If approved, update the user's role
+    if (status === 'approved') {
+      await User.findByIdAndUpdate(roleRequest.userId, {
+        role: roleRequest.requestedRole
+      });
+    }
+
+    const updatedRoleRequest = await RoleRequest.findById(req.params.id)
+      .populate('userId', 'name email role')
+      .populate('reviewedBy', 'name email');
+
+    res.json({
+      message: `Role request ${status} successfully`,
+      roleRequest: updatedRoleRequest,
+    });
+  } catch (error) {
+    console.error('Review role request error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
