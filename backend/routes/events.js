@@ -7,16 +7,25 @@ const { authenticateToken, isOrganizer } = require('../middleware/auth');
 // Database connection check middleware
 const checkDBConnection = (req, res, next) => {
   if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ 
+    return res.status(503).json({
       message: 'Database connection not available',
-      error: 'Please check MongoDB connection and environment variables'
+      error: 'Please check MongoDB connection and environment variables',
+      timestamp: new Date().toISOString()
     });
   }
   next();
 };
 
-// Get all events (public)
-router.get('/', checkDBConnection, async (req, res) => {
+// Get all events (public) - with graceful degradation
+router.get('/', async (req, res) => {
+  // Check database connection first
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      message: 'Database connection not available',
+      error: 'Please check MongoDB connection and environment variables',
+      timestamp: new Date().toISOString()
+    });
+  }
   try {
     const { page = 1, limit = 10, category, date, price, search } = req.query;
 

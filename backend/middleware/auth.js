@@ -8,26 +8,57 @@ const authenticateToken = async (req, res, next) => {
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-      return res.status(401).json({ message: 'Access token required' });
+      return res.status(401).json({
+        message: 'Access token required',
+        error: 'NO_TOKEN'
+      });
+    }
+
+    // Check if JWT_SECRET is configured
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET not configured');
+      return res.status(500).json({ message: 'Server configuration error' });
     }
 
     jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
       if (err) {
-        return res.status(403).json({ message: 'Invalid or expired token' });
+        console.error('JWT verification error:', err.message);
+        return res.status(403).json({
+          message: 'Invalid or expired token',
+          error: err.name // TokenExpiredError or JsonWebTokenError
+        });
       }
 
       try {
+        // Check database connection before querying
+        const mongoose = require('mongoose');
+        if (mongoose.connection.readyState !== 1) {
+          return res.status(503).json({
+            message: 'Database connection not available',
+            error: 'DB_CONNECTION_ERROR'
+          });
+        }
+
         // Find user by civicId from decoded token
         const user = await User.findOne({ civicId: decoded.civicId, isActive: true });
 
         if (!user) {
-          return res.status(401).json({ message: 'User not found or inactive' });
+          return res.status(401).json({
+            message: 'User not found or inactive',
+            error: 'USER_NOT_FOUND'
+          });
         }
 
         req.user = user;
         next();
       } catch (error) {
         console.error('Error finding user:', error);
+        if (error.name === 'MongoNetworkError' || error.name === 'MongoServerError') {
+          return res.status(503).json({
+            message: 'Database connection error',
+            error: 'DB_CONNECTION_ERROR'
+          });
+        }
         res.status(500).json({ message: 'Internal server error' });
       }
     });

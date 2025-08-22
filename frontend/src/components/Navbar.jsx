@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { useUser } from '@civic/auth/react';
-import { Menu, X, User, LogOut, Calendar, Home, BarChart3, QrCode } from 'lucide-react';
+import { Menu, X, User, LogOut, Calendar, Home, BarChart3, QrCode, Shield, Crown } from 'lucide-react';
 
 const Navbar = () => {
   const { signOut } = useUser();
@@ -30,6 +30,33 @@ const Navbar = () => {
     } catch (error) {
       console.error('Logout error:', error);
     }
+  };
+
+  // Role badge component
+  const RoleBadge = ({ user, isOrganizer }) => {
+    if (!user) return null;
+
+    const getRoleIcon = () => {
+      if (isOrganizer) return <Crown size={12} className="text-yellow-400" />;
+      return <Shield size={12} className="text-blue-400" />;
+    };
+
+    const getRoleText = () => {
+      if (isOrganizer) return 'Organizer';
+      return 'Attendee';
+    };
+
+    const getRoleColor = () => {
+      if (isOrganizer) return 'bg-yellow-500/20 text-yellow-200 border-yellow-500/30';
+      return 'bg-blue-500/20 text-blue-200 border-blue-500/30';
+    };
+
+    return (
+      <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium border ${getRoleColor()}`}>
+        {getRoleIcon()}
+        <span>{getRoleText()}</span>
+      </div>
+    );
   };
 
   const toggleMobileMenu = () => {
@@ -99,13 +126,16 @@ const Navbar = () => {
             )}
 
             {isLoggedIn && (
-              <Link
-                to="/profile"
-                className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
-              >
-                <User size={18} />
-                <span>Profile</span>
-              </Link>
+              <div className="flex items-center space-x-4">
+                <RoleBadge user={user} isOrganizer={isOrganizer} />
+                <Link
+                  to="/profile"
+                  className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
+                >
+                  <User size={18} />
+                  <span>Profile</span>
+                </Link>
+              </div>
             )}
           </div>
 
@@ -165,14 +195,17 @@ const Navbar = () => {
               )}
 
               {isLoggedIn && (
-                <Link
-                  to="/profile"
-                  className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
-                  onClick={closeMobileMenu}
-                >
-                  <User size={18} />
-                  <span>Profile</span>
-                </Link>
+                <div className="py-2">
+                  <RoleBadge user={user} isOrganizer={isOrganizer} />
+                  <Link
+                    to="/profile"
+                    className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2 mt-2"
+                    onClick={closeMobileMenu}
+                  >
+                    <User size={18} />
+                    <span>Profile</span>
+                  </Link>
+                </div>
               )}
             </div>
           </div>

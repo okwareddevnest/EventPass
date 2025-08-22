@@ -63,16 +63,33 @@ app.use(morgan('combined'));
 const connectDB = async () => {
   try {
     const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/eventpass';
-    
+
     if (!process.env.MONGODB_URI) {
       console.warn('⚠️  MONGODB_URI not set, using local MongoDB. This will not work in production!');
     }
-    
+
     await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
     });
+
     console.log('✅ Connected to MongoDB');
+
+    // Handle connection events
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ MongoDB connection error:', err);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.warn('⚠️  MongoDB disconnected');
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected');
+    });
+
   } catch (err) {
     console.error('❌ MongoDB connection error:', err.message);
     if (!process.env.MONGODB_URI) {
