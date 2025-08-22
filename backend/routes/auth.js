@@ -285,4 +285,17 @@ router.post('/callback', async (req, res) => {
   }
 });
 
+// Health check for auth routes
+router.get('/', (req, res) => {
+  res.json({
+    message: 'Auth API is running',
+    endpoints: [
+      'POST /api/auth/verify - Verify Civic Auth token',
+      'GET /api/auth/me - Get current user profile',
+      'PUT /api/auth/profile - Update user profile',
+      'POST /api/auth/callback - OAuth callback endpoint'
+    ]
+  });
+});
+
 module.exports = router;

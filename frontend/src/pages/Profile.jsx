@@ -6,12 +6,11 @@ import { User, Mail, Wallet, Shield, Calendar, QrCode, Download, Eye } from 'luc
 import { ticketsAPI } from '../services/api';
 
 const Profile = () => {
-  const { user, updateProfile } = useAuth();
-  const { user: civicUser } = useUser();
-  const { success, error } = useNotification();
+  const { user, updateProfile, isCivicUser } = useAuth();
+  const { success, error, info } = useNotification();
 
-  // Use Civic user if available, fallback to custom auth user
-  const currentUser = civicUser || user;
+  // Use the unified user from auth context
+  const currentUser = user;
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,11 +26,11 @@ const Profile = () => {
       setFormData({
         name: currentUser.name || '',
         email: currentUser.email || '',
-        walletAddress: currentUser.walletAddress || '',
+        walletAddress: currentUser.wallet_address || currentUser.walletAddress || '',
       });
       fetchUserTickets();
     }
-  }, [currentUser]);
+  }, [currentUser, isCivicUser]);
 
   const fetchUserTickets = async () => {
     try {
@@ -59,8 +58,14 @@ const Profile = () => {
     e.preventDefault();
 
     try {
-      // For Civic Auth users, profile updates might need to go through Civic's API
-      // For now, we'll try the custom auth update
+      // If user is from Civic Auth, show message that profile is managed by Civic
+      if (isCivicUser) {
+        info('Profile information is managed by Civic Auth. Changes cannot be made here.');
+        setEditing(false);
+        return;
+      }
+
+      // For custom auth users, proceed with profile update
       const result = await updateProfile(formData);
 
       if (result.success) {
@@ -79,7 +84,7 @@ const Profile = () => {
     setFormData({
       name: currentUser.name || '',
       email: currentUser.email || '',
-      walletAddress: currentUser.walletAddress || '',
+      walletAddress: currentUser.wallet_address || currentUser.walletAddress || '',
     });
     setEditing(false);
   };
@@ -134,6 +139,8 @@ const Profile = () => {
                 <button
                   onClick={() => setEditing(true)}
                   className="text-primary hover:text-secondary transition-colors duration-200"
+                  disabled={isCivicUser}
+                  title={isCivicUser ? 'Profile managed by Civic Auth' : 'Edit Profile'}
                 >
                   Edit Profile
                 </button>
@@ -163,7 +170,7 @@ const Profile = () => {
                   <div>
                     <p className="text-neutral/70 text-sm">Wallet Address</p>
                     <p className="text-neutral font-medium font-mono text-sm">
-                      {currentUser.walletAddress || 'Not connected'}
+                      {currentUser.wallet_address || currentUser.walletAddress || 'Not connected'}
                     </p>
                   </div>
                 </div>
@@ -227,6 +234,8 @@ const Profile = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-mono"
                     placeholder="0x..."
+                    disabled={isCivicUser}
+                    title={isCivicUser ? 'Managed by Civic Auth' : ''}
                   />
                 </div>
 

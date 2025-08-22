@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useUser } from '@civic/auth/react';
 
 const AuthContext = createContext();
 
@@ -11,18 +12,26 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
+  const { user: civicUser, isLoading: civicLoading } = useUser();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
+  // Combine loading states
   useEffect(() => {
-    if (token) {
-      // Verify token and get user profile
+    if (!civicLoading) {
+      setLoading(false);
+    }
+  }, [civicLoading]);
+
+  useEffect(() => {
+    if (token && !civicUser) {
+      // Verify token and get user profile only if not using Civic auth
       verifyToken();
     } else {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, civicUser]);
 
   const verifyToken = async () => {
     try {
@@ -113,15 +122,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Use Civic user if available, fallback to custom auth user
+  const currentUser = civicUser || user;
+  const isAuthenticated = !!currentUser;
+
   const value = {
-    user,
+    user: currentUser,
     token,
     loading,
     login,
     logout,
     updateProfile,
-    isAuthenticated: !!user,
-    isOrganizer: user?.role === 'organizer',
+    isAuthenticated,
+    isOrganizer: currentUser?.role === 'organizer',
+    isCivicUser: !!civicUser,
   };
 
   return (

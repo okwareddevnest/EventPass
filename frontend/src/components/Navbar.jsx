@@ -2,23 +2,22 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { useUser, UserButton } from '@civic/auth/react';
+import { useUser } from '@civic/auth/react';
 import { Menu, X, User, LogOut, Calendar, Home, BarChart3, QrCode } from 'lucide-react';
 
 const Navbar = () => {
-  const { user: civicUser, signOut } = useUser();
-  const { user, isAuthenticated, logout, isOrganizer } = useAuth();
+  const { signOut } = useUser();
+  const { user, isAuthenticated, logout, isOrganizer, isCivicUser } = useAuth();
   const { info } = useNotification();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Use Civic Auth user if available, fallback to custom auth
-  const currentUser = civicUser || user;
-  const isLoggedIn = civicUser || isAuthenticated;
+  // Use the unified auth context
+  const isLoggedIn = isAuthenticated;
 
   const handleLogout = async () => {
     try {
-      if (civicUser) {
+      if (isCivicUser) {
         // Use Civic Auth signOut
         await signOut();
       } else {
@@ -77,8 +76,7 @@ const Navbar = () => {
               <span>Events</span>
             </Link>
 
-            {/* Civic Auth User Button */}
-            <UserButton />
+
 
             {/* Additional navigation for authenticated users */}
             {isLoggedIn && isOrganizer && (
@@ -142,10 +140,7 @@ const Navbar = () => {
                 <span>Events</span>
               </Link>
 
-              {/* Civic Auth User Button for mobile */}
-              <div className="py-2">
-                <UserButton />
-              </div>
+
 
               {/* Additional navigation for authenticated users */}
               {isLoggedIn && isOrganizer && (

@@ -59,13 +59,30 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Logging
 app.use(morgan('combined'));
 
-// MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/eventpass', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
+// MongoDB connection with better error handling
+const connectDB = async () => {
+  try {
+    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/eventpass';
+    
+    if (!process.env.MONGODB_URI) {
+      console.warn('⚠️  MONGODB_URI not set, using local MongoDB. This will not work in production!');
+    }
+    
+    await mongoose.connect(mongoURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log('✅ Connected to MongoDB');
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err.message);
+    if (!process.env.MONGODB_URI) {
+      console.error('💡 Set MONGODB_URI environment variable to fix this error');
+    }
+    // Don't exit the process, let it continue but API calls will fail
+  }
+};
+
+connectDB();
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -75,7 +92,26 @@ app.use('/api/pesapal', require('./routes/pesapal'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'EventPass API is running' });
+  const healthStatus = {
+    status: 'OK',
+    message: 'EventPass API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      connected: mongoose.connection.readyState === 1,
+      state: mongoose.connection.readyState,
+      stateText: ['disconnected', 'connected', 'connecting', 'disconnecting'][mongoose.connection.readyState] || 'unknown'
+    },
+    environment_variables: {
+      mongodb_uri_set: !!process.env.MONGODB_URI,
+      civic_client_id_set: !!process.env.CIVIC_CLIENT_ID,
+      jwt_secret_set: !!process.env.JWT_SECRET,
+      frontend_url_set: !!process.env.FRONTEND_URL
+    }
+  };
+  
+  const statusCode = healthStatus.database.connected ? 200 : 503;
+  res.status(statusCode).json(healthStatus);
 });
 
 // Error handling middleware

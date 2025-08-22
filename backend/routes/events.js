@@ -1,10 +1,22 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Event = require('../models/Event');
 const { authenticateToken, isOrganizer } = require('../middleware/auth');
 
+// Database connection check middleware
+const checkDBConnection = (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ 
+      message: 'Database connection not available',
+      error: 'Please check MongoDB connection and environment variables'
+    });
+  }
+  next();
+};
+
 // Get all events (public)
-router.get('/', async (req, res) => {
+router.get('/', checkDBConnection, async (req, res) => {
   try {
     const { page = 1, limit = 10, category, date, price, search } = req.query;
 

@@ -9,11 +9,19 @@ class ApiService {
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
 
+    // Add authorization header if token exists
+    const token = localStorage.getItem('token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const config = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
+      headers,
       ...options,
     };
 
@@ -110,7 +118,7 @@ export const ticketsAPI = {
   purchaseTicket: (ticketData) => apiService.post('/api/tickets/purchase', ticketData),
 
   // Get user tickets
-  getUserTickets: () => apiService.get('/api/tickets/user'),
+  getUserTickets: () => apiService.get('/api/tickets/my-tickets'),
 
   // Validate ticket
   validateTicket: (ticketId) => apiService.post(`/api/tickets/validate/${ticketId}`),
