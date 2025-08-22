@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import OrganizationApproval from '../components/OrganizationApproval';
-import { financialAPI } from '../services/api';
+import apiService, { financialAPI } from '../services/api';
 import {
   Users as UsersIcon,
   UserPlus,
@@ -72,41 +72,17 @@ const AdminDashboard = () => {
       setLoading(true);
 
       // Fetch users
-      const usersResponse = await fetch('/api/admin/users', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (usersResponse.ok) {
-        const usersData = await usersResponse.json();
-        setUserList(usersData.users);
-        setStats(usersData.stats);
-      }
+      const usersData = await apiService.get('/api/admin/users');
+      setUserList(usersData.users);
+      setStats(usersData.stats);
 
       // Fetch system stats
-      const statsResponse = await fetch('/api/admin/stats', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        setSystemStats(statsData);
-      }
+      const statsData = await apiService.get('/api/admin/stats');
+      setSystemStats(statsData);
 
       // Fetch role requests
-      const roleRequestsResponse = await fetch('/api/admin/role-requests', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (roleRequestsResponse.ok) {
-        const roleRequestsData = await roleRequestsResponse.json();
-        setRoleRequests(roleRequestsData.roleRequests);
-      }
+      const roleRequestsData = await apiService.get('/api/admin/role-requests');
+      setRoleRequests(roleRequestsData.roleRequests);
 
       // Fetch financial data
       await fetchFinancialData();
@@ -121,22 +97,9 @@ const AdminDashboard = () => {
 
   const handleRoleChange = async (userId, newRole) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}/role`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ role: newRole }),
-      });
-
-      if (response.ok) {
-        success('User role updated successfully');
-        fetchDashboardData(); // Refresh data
-      } else {
-        const errorData = await response.json();
-        showError(errorData.message || 'Failed to update user role');
-      }
+      await apiService.put(`/api/admin/users/${userId}/role`, { role: newRole });
+      success('User role updated successfully');
+      fetchDashboardData(); // Refresh data
     } catch (err) {
       console.error('Error updating user role:', err);
       showError('Failed to update user role');
@@ -145,22 +108,9 @@ const AdminDashboard = () => {
 
   const handleStatusToggle = async (userId, isActive) => {
     try {
-      const response = await fetch(`/api/admin/users/${userId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ isActive }),
-      });
-
-      if (response.ok) {
-        success(`User ${isActive ? 'activated' : 'deactivated'} successfully`);
-        fetchDashboardData(); // Refresh data
-      } else {
-        const errorData = await response.json();
-        showError(errorData.message || 'Failed to update user status');
-      }
+      await apiService.put(`/api/admin/users/${userId}/status`, { isActive });
+      success(`User ${isActive ? 'activated' : 'deactivated'} successfully`);
+      fetchDashboardData(); // Refresh data
     } catch (err) {
       console.error('Error updating user status:', err);
       showError('Failed to update user status');
@@ -173,20 +123,9 @@ const AdminDashboard = () => {
     }
 
     try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (response.ok) {
-        success('User deleted successfully');
-        fetchDashboardData(); // Refresh data
-      } else {
-        const errorData = await response.json();
-        showError(errorData.message || 'Failed to delete user');
-      }
+      await apiService.delete(`/api/admin/users/${userId}`);
+      success('User deleted successfully');
+      fetchDashboardData(); // Refresh data
     } catch (err) {
       console.error('Error deleting user:', err);
       showError('Failed to delete user');
@@ -195,24 +134,11 @@ const AdminDashboard = () => {
 
   const handleRoleRequestReview = async (requestId, status, reviewNotes = '') => {
     try {
-      const response = await fetch(`/api/admin/role-requests/${requestId}/review`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status, reviewNotes }),
-      });
-
-      if (response.ok) {
-        success(`Role request ${status} successfully`);
-        setShowRoleRequestModal(false);
-        setSelectedRoleRequest(null);
-        fetchDashboardData(); // Refresh data
-      } else {
-        const errorData = await response.json();
-        showError(errorData.message || `Failed to ${status} role request`);
-      }
+      await apiService.put(`/api/admin/role-requests/${requestId}/review`, { status, reviewNotes });
+      success(`Role request ${status} successfully`);
+      setShowRoleRequestModal(false);
+      setSelectedRoleRequest(null);
+      fetchDashboardData(); // Refresh data
     } catch (err) {
       console.error('Error reviewing role request:', err);
       showError(`Failed to ${status} role request`);
@@ -1077,21 +1003,8 @@ const CreateUserModal = ({ onClose, onSuccess }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/admin/create-user', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        onSuccess();
-      } else {
-        const errorData = await response.json();
-        showError(errorData.message || 'Failed to create user');
-      }
+      await apiService.post('/api/admin/create-user', formData);
+      onSuccess();
     } catch (err) {
       console.error('Error creating user:', err);
       showError('Failed to create user');
