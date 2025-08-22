@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useUser } from '@civic/auth/react';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -35,19 +36,8 @@ export const AuthProvider = ({ children }) => {
 
   const verifyToken = async () => {
     try {
-      const response = await fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-      } else {
-        // Token is invalid, clear it
-        logout();
-      }
+      const data = await authAPI.getCurrentUser();
+      setUser(data.user);
     } catch (error) {
       console.error('Token verification error:', error);
       logout();
@@ -58,36 +48,23 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (civicToken, userData) => {
     try {
-      const response = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token: civicToken,
-          civicId: userData.civicId,
-          name: userData.name,
-          email: userData.email,
-          walletAddress: userData.walletAddress,
-        }),
+      const data = await authAPI.verify({
+        token: civicToken,
+        civicId: userData.civicId,
+        name: userData.name,
+        email: userData.email,
+        walletAddress: userData.walletAddress,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const jwtToken = data.token;
+      const jwtToken = data.token;
+      localStorage.setItem('token', jwtToken);
+      setToken(jwtToken);
+      setUser(data.user);
 
-        localStorage.setItem('token', jwtToken);
-        setToken(jwtToken);
-        setUser(data.user);
-
-        return { success: true, user: data.user };
-      } else {
-        const error = await response.json();
-        return { success: false, error: error.message };
-      }
+      return { success: true, user: data.user };
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: 'Network error occurred' };
+      return { success: false, error: error.message || 'Network error occurred' };
     }
   };
 
@@ -99,26 +76,12 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (profileData) => {
     try {
-      const response = await fetch('/api/auth/profile', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(profileData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        return { success: true, user: data.user };
-      } else {
-        const error = await response.json();
-        return { success: false, error: error.message };
-      }
+      const data = await authAPI.updateProfile(profileData);
+      setUser(data.user);
+      return { success: true, user: data.user };
     } catch (error) {
       console.error('Update profile error:', error);
-      return { success: false, error: 'Network error occurred' };
+      return { success: false, error: error.message || 'Network error occurred' };
     }
   };
 

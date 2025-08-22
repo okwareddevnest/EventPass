@@ -96,17 +96,14 @@ export const eventsAPI = {
 
 // Auth-specific API methods
 export const authAPI = {
-  // Login
-  login: (credentials) => apiService.post('/api/auth/login', credentials),
-
-  // Register
-  register: (userData) => apiService.post('/api/auth/register', userData),
-
-  // Logout
-  logout: () => apiService.post('/api/auth/logout'),
+  // Verify Civic Auth token
+  verify: (tokenData) => apiService.post('/api/auth/verify', tokenData),
 
   // Get current user
   getCurrentUser: () => apiService.get('/api/auth/me'),
+
+  // Update profile
+  updateProfile: (profileData) => apiService.put('/api/auth/profile', profileData),
 };
 
 // Ticket-specific API methods
