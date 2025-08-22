@@ -14,6 +14,7 @@ import Auth from './pages/Auth';
 import Events from './pages/Events';
 import EventDetail from './pages/EventDetail';
 import Dashboard from './pages/Dashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
 import PaymentCallback from './pages/PaymentCallback';
 import CheckIn from './pages/CheckIn';
@@ -60,6 +61,11 @@ function App() {
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin" element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
                   </ProtectedRoute>
                 } />
                 <Route path="/profile" element={

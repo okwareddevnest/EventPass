@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['attendee', 'organizer'],
+    enum: ['attendee', 'organizer', 'admin'],
     default: 'attendee',
   },
   walletAddress: {

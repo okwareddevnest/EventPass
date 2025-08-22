@@ -76,6 +76,22 @@ const isOrganizer = (req, res, next) => {
   next();
 };
 
+// Check if user is admin (highest level)
+const isAdmin = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+  }
+  next();
+};
+
+// Check if user is organizer or admin
+const isOrganizerOrAdmin = (req, res, next) => {
+  if (req.user.role !== 'organizer' && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Access denied. Organizer or Admin privileges required.' });
+  }
+  next();
+};
+
 // Check if user owns the resource
 const isOwner = (req, res, next) => {
   if (req.user._id.toString() !== req.params.userId && req.user.role !== 'admin') {
@@ -101,5 +117,7 @@ module.exports = {
   authenticateToken,
   isOrganizer,
   isOwner,
+  isAdmin,
+  isOrganizerOrAdmin,
   generateToken,
 };

@@ -37,16 +37,19 @@ const Navbar = () => {
     if (!user) return null;
 
     const getRoleIcon = () => {
-      if (isOrganizer) return <Crown size={12} className="text-yellow-400" />;
-      return <Shield size={12} className="text-blue-400" />;
+      if (user.role === 'admin') return <Crown size={12} className="text-red-400" />;
+      if (isOrganizer) return <Shield size={12} className="text-yellow-400" />;
+      return <Users size={12} className="text-blue-400" />;
     };
 
     const getRoleText = () => {
+      if (user.role === 'admin') return 'System Admin';
       if (isOrganizer) return 'Organizer';
       return 'Attendee';
     };
 
     const getRoleColor = () => {
+      if (user.role === 'admin') return 'bg-red-500/20 text-red-200 border-red-500/30';
       if (isOrganizer) return 'bg-yellow-500/20 text-yellow-200 border-yellow-500/30';
       return 'bg-blue-500/20 text-blue-200 border-blue-500/30';
     };
@@ -106,22 +109,37 @@ const Navbar = () => {
 
 
             {/* Additional navigation for authenticated users */}
-            {isLoggedIn && isOrganizer && (
+            {isLoggedIn && (
               <>
-                <Link
-                  to="/dashboard"
-                  className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
-                >
-                  <BarChart3 size={18} />
-                  <span>Dashboard</span>
-                </Link>
-                <Link
-                  to="/checkin"
-                  className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
-                >
-                  <QrCode size={18} />
-                  <span>Check-In</span>
-                </Link>
+                {isOrganizer && (
+                  <>
+                    <Link
+                      to="/dashboard"
+                      className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
+                    >
+                      <BarChart3 size={18} />
+                      <span>Dashboard</span>
+                    </Link>
+                    <Link
+                      to="/checkin"
+                      className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
+                    >
+                      <QrCode size={18} />
+                      <span>Check-In</span>
+                    </Link>
+                  </>
+                )}
+
+                {/* Admin-only navigation */}
+                {user?.role === 'admin' && (
+                  <Link
+                    to="/admin"
+                    className="flex items-center space-x-1 text-neutral hover:text-red-400 transition-colors duration-200"
+                  >
+                    <Crown size={18} />
+                    <span>Admin Panel</span>
+                  </Link>
+                )}
               </>
             )}
 
@@ -173,24 +191,40 @@ const Navbar = () => {
 
 
               {/* Additional navigation for authenticated users */}
-              {isLoggedIn && isOrganizer && (
+              {isLoggedIn && (
                 <>
-                  <Link
-                    to="/dashboard"
-                    className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
-                    onClick={closeMobileMenu}
-                  >
-                    <BarChart3 size={18} />
-                    <span>Dashboard</span>
-                  </Link>
-                  <Link
-                    to="/checkin"
-                    className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
-                    onClick={closeMobileMenu}
-                  >
-                    <QrCode size={18} />
-                    <span>Check-In</span>
-                  </Link>
+                  {isOrganizer && (
+                    <>
+                      <Link
+                        to="/dashboard"
+                        className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
+                        onClick={closeMobileMenu}
+                      >
+                        <BarChart3 size={18} />
+                        <span>Dashboard</span>
+                      </Link>
+                      <Link
+                        to="/checkin"
+                        className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
+                        onClick={closeMobileMenu}
+                      >
+                        <QrCode size={18} />
+                        <span>Check-In</span>
+                      </Link>
+                    </>
+                  )}
+
+                  {/* Admin-only navigation */}
+                  {user?.role === 'admin' && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center space-x-2 text-neutral hover:text-red-400 transition-colors duration-200 py-2"
+                      onClick={closeMobileMenu}
+                    >
+                      <Crown size={18} />
+                      <span>Admin Panel</span>
+                    </Link>
+                  )}
                 </>
               )}
 
