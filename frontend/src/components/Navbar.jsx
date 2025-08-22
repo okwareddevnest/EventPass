@@ -7,7 +7,7 @@ import { Menu, X, User, LogOut, Calendar, Home, BarChart3, QrCode, Shield, Crown
 
 const Navbar = () => {
   const { signOut } = useUser();
-  const { user, isAuthenticated, logout, isOrganizer, isCivicUser } = useAuth();
+  const { user, isAuthenticated, logout, isAdmin, isOrganizer, isCivicUser } = useAuth();
   const { info } = useNotification();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -111,27 +111,27 @@ const Navbar = () => {
             {/* Additional navigation for authenticated users */}
             {isLoggedIn && (
               <>
+                {/* Dashboard for all authenticated users */}
+                <Link
+                  to="/dashboard"
+                  className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
+                >
+                  <BarChart3 size={18} />
+                  <span>Dashboard</span>
+                </Link>
+
                 {isOrganizer && (
-                  <>
-                    <Link
-                      to="/dashboard"
-                      className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
-                    >
-                      <BarChart3 size={18} />
-                      <span>Dashboard</span>
-                    </Link>
-                    <Link
-                      to="/checkin"
-                      className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
-                    >
-                      <QrCode size={18} />
-                      <span>Check-In</span>
-                    </Link>
-                  </>
+                  <Link
+                    to="/checkin"
+                    className="flex items-center space-x-1 text-neutral hover:text-primary transition-colors duration-200"
+                  >
+                    <QrCode size={18} />
+                    <span>Check-In</span>
+                  </Link>
                 )}
 
                 {/* Admin-only navigation */}
-                {user?.role === 'admin' && (
+                {isAdmin && (
                   <Link
                     to="/admin"
                     className="flex items-center space-x-1 text-neutral hover:text-red-400 transition-colors duration-200"
@@ -193,29 +193,29 @@ const Navbar = () => {
               {/* Additional navigation for authenticated users */}
               {isLoggedIn && (
                 <>
+                  {/* Dashboard for all authenticated users */}
+                  <Link
+                    to="/dashboard"
+                    className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
+                    onClick={closeMobileMenu}
+                  >
+                    <BarChart3 size={18} />
+                    <span>Dashboard</span>
+                  </Link>
+
                   {isOrganizer && (
-                    <>
-                      <Link
-                        to="/dashboard"
-                        className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
-                        onClick={closeMobileMenu}
-                      >
-                        <BarChart3 size={18} />
-                        <span>Dashboard</span>
-                      </Link>
-                      <Link
-                        to="/checkin"
-                        className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
-                        onClick={closeMobileMenu}
-                      >
-                        <QrCode size={18} />
-                        <span>Check-In</span>
-                      </Link>
-                    </>
+                    <Link
+                      to="/checkin"
+                      className="flex items-center space-x-2 text-neutral hover:text-primary transition-colors duration-200 py-2"
+                      onClick={closeMobileMenu}
+                    >
+                      <QrCode size={18} />
+                      <span>Check-In</span>
+                    </Link>
                   )}
 
                   {/* Admin-only navigation */}
-                  {user?.role === 'admin' && (
+                  {isAdmin && (
                     <Link
                       to="/admin"
                       className="flex items-center space-x-2 text-neutral hover:text-red-400 transition-colors duration-200 py-2"

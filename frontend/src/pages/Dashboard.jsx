@@ -25,8 +25,8 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
-  const { user, isAuthenticated, isOrganizer } = useAuth();
-  const { error } = useNotification();
+  const { user, isAuthenticated, isAdmin, isOrganizer } = useAuth();
+  const { error, success } = useNotification();
 
   const [events, setEvents] = useState([]);
   const [tickets, setTickets] = useState([]);

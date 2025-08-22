@@ -1,5 +1,21 @@
 // API service for EventPass
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// Handle both local development and production environments
+const getApiBaseUrl = () => {
+  // Check if we have an explicit API URL set
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // Production detection
+  if (window.location.hostname === 'event-pass-five.vercel.app') {
+    return 'https://eventpass-backend-hggh.onrender.com';
+  }
+  
+  // Local development
+  return 'http://localhost:5000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiService {
   constructor() {
@@ -8,6 +24,7 @@ class ApiService {
 
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
+    console.log(`Making API request to: ${url}`);
 
     // Add authorization header if token exists
     const token = localStorage.getItem('token');
@@ -18,6 +35,9 @@ class ApiService {
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+      console.log('Token found, adding to headers');
+    } else {
+      console.log('No token found in localStorage');
     }
 
     const config = {
@@ -28,11 +48,31 @@ class ApiService {
     try {
       const response = await fetch(url, config);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Handle different response types
+      if (response.status === 401) {
+        console.error('Unauthorized request - clearing token');
+        localStorage.removeItem('token');
+        // Don't throw here, let the component handle it
       }
 
-      return await response.json();
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.message || `HTTP error! status: ${response.status}`;
+        } catch {
+          errorMessage = `HTTP error! status: ${response.status}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      } else {
+        return await response.text();
+      }
     } catch (error) {
       console.error(`API request failed for ${endpoint}:`, error);
       throw error;

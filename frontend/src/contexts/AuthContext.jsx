@@ -18,21 +18,62 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
-  // Combine loading states
+  // Handle initial authentication state
   useEffect(() => {
-    if (!civicLoading) {
-      setLoading(false);
-    }
-  }, [civicLoading]);
+    const initializeAuth = async () => {
+      setLoading(true);
+      
+      // If we have a token, verify it
+      if (token) {
+        await verifyToken();
+      }
+      
+      // If we have a Civic user but no token, handle the authentication
+      if (civicUser && !token) {
+        console.log('Civic user detected, processing authentication...');
+        await handleCivicUserAuth(civicUser);
+      }
+      
+      if (!civicLoading) {
+        setLoading(false);
+      }
+    };
 
-  useEffect(() => {
-    if (token && !civicUser) {
-      // Verify token and get user profile only if not using Civic auth
-      verifyToken();
-    } else {
-      setLoading(false);
+    initializeAuth();
+  }, [civicUser, token, civicLoading]);
+
+  // Handle Civic user authentication
+  const handleCivicUserAuth = async (civicUserData) => {
+    try {
+      console.log('Processing Civic user authentication:', civicUserData);
+      
+      // Extract user data from Civic user
+      const userData = {
+        civicId: civicUserData.id || civicUserData.sub || `temp-${Date.now()}`,
+        name: civicUserData.name || civicUserData.displayName || 'Civic User',
+        email: civicUserData.email || civicUserData.emailAddress || null,
+        walletAddress: civicUserData.walletAddress || civicUserData.publicKey || null
+      };
+
+      if (!userData.email) {
+        console.error('No email found in Civic user data');
+        return;
+      }
+
+      // Create a mock token for the verify endpoint
+      const mockToken = 'civic-auth-token';
+      
+      const result = await login(mockToken, userData);
+      
+      if (result.success) {
+        console.log('✅ Civic user authentication successful:', result.user);
+      } else {
+        console.error('❌ Civic user authentication failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Error processing Civic user authentication:', error);
     }
-  }, [token, civicUser]);
+  };
 
   const verifyToken = async () => {
     try {
@@ -85,8 +126,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Use Civic user if available, fallback to custom auth user
-  const currentUser = civicUser || user;
+  // Prefer JWT user data over Civic user data for role-based access
+  // Civic user is used for authentication, JWT user contains role information
+  const currentUser = user || civicUser;
   const isAuthenticated = !!currentUser;
 
   const value = {
@@ -97,6 +139,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     isAuthenticated,
+    isAdmin: currentUser?.role === 'admin',
     isOrganizer: currentUser?.role === 'organizer',
     isOrganization: currentUser?.role === 'organization',
     isApprovedOrganization: currentUser?.role === 'organization' && currentUser?.organizationDetails?.isApproved,
