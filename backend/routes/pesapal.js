@@ -9,6 +9,7 @@ const Settings = require('../models/Settings');
 const Event = require('../models/Event');
 const User = require('../models/User');
 const Ticket = require('../models/Ticket');
+const Transaction = require('../models/Transaction');
 const QRCode = require('qrcode');
 const { validateRequest, ipnRegistrationSchema, createOrderSchema, callbackSchema, verificationSchema } = require('../validation/schemas');
 
@@ -337,7 +338,15 @@ async function processIPNNotification(notificationData) {
               statusData.payment_status_description,
               statusData.confirmation_code
             );
-            await createTicketForPayment(paymentIntent);
+            
+            // Handle different payment types
+            if (paymentIntent.eventId) {
+              // Regular ticket payment
+              await createTicketForPayment(paymentIntent);
+            } else {
+              // Organization deposit payment
+              await processDepositPayment(paymentIntent);
+            }
           }
           break;
         case 2: // FAILED
@@ -358,7 +367,31 @@ async function processIPNNotification(notificationData) {
   }
 }
 
-// Helper function to create ticket for completed payment
+// Helper function to process organization deposit payments
+async function processDepositPayment(paymentIntent) {
+  try {
+    console.log('Processing organization deposit payment:', paymentIntent.orderTrackingId);
+
+    // Find the organization user
+    const user = await User.findById(paymentIntent.userId);
+    if (!user || user.role !== 'organization') {
+      throw new Error('Organization user not found for deposit payment');
+    }
+
+    // Mark deposit as paid
+    user.organizationDetails.depositPaid = true;
+    await user.save();
+
+    console.log(`Organization deposit paid: ${user.organizationDetails.orgName} - KES ${paymentIntent.amount}`);
+    
+    return { success: true, message: 'Organization deposit processed successfully' };
+  } catch (error) {
+    console.error('Error processing deposit payment:', error);
+    throw error;
+  }
+}
+
+// Helper function to create ticket for completed payment and handle payment distribution
 async function createTicketForPayment(paymentIntent) {
   try {
     // Check if ticket already exists
@@ -371,6 +404,33 @@ async function createTicketForPayment(paymentIntent) {
     if (existingTicket) {
       console.log('Ticket already exists for payment:', paymentIntent.orderTrackingId);
       return existingTicket;
+    }
+
+    // Get event details to find the organizer
+    const event = await Event.findById(paymentIntent.eventId);
+    if (!event) {
+      throw new Error('Event not found for payment');
+    }
+
+    // Get admin commission percentage from settings (default 10%)
+    const commissionPercentage = await Settings.getValue(
+      Settings.SYSTEM_KEYS.ADMIN_COMMISSION_PERCENTAGE, 
+      10
+    );
+
+    // Create payment transaction with commission split
+    const transactionResult = await Transaction.createPaymentWithCommission(
+      paymentIntent, 
+      event, 
+      commissionPercentage
+    );
+
+    // Update organization's earnings
+    const organizer = await User.findById(event.organizerId);
+    if (organizer && organizer.organizationDetails) {
+      organizer.organizationDetails.totalEarnings += transactionResult.organizerEarnings;
+      organizer.organizationDetails.pendingEarnings += transactionResult.organizerEarnings;
+      await organizer.save();
     }
 
     // Create QR code
@@ -411,10 +471,20 @@ async function createTicketForPayment(paymentIntent) {
       $inc: { currentAttendees: 1 }
     });
 
-    console.log('Ticket created for payment:', paymentIntent.orderTrackingId);
-    return ticket;
+    console.log('Ticket created and payment distributed for:', paymentIntent.orderTrackingId);
+    console.log(`Payment split: Admin (${commissionPercentage}%): ${transactionResult.adminCommission} KES, Organizer: ${transactionResult.organizerEarnings} KES`);
+    
+    return {
+      ticket,
+      paymentDistribution: {
+        totalAmount: paymentIntent.amount,
+        adminCommission: transactionResult.adminCommission,
+        organizerEarnings: transactionResult.organizerEarnings,
+        commissionPercentage,
+      }
+    };
   } catch (error) {
-    console.error('Error creating ticket for payment:', error);
+    console.error('Error creating ticket and distributing payment:', error);
     throw error;
   }
 }

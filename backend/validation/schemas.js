@@ -39,6 +39,27 @@ const settingsSchema = z.object({
   value: z.union([z.string(), z.number(), z.boolean()])
 });
 
+// Payout request schema
+const payoutRequestSchema = z.object({
+  amount: z.number().min(1, 'Amount must be greater than 0'),
+  payoutMethod: z.enum(['bank_transfer', 'mobile_money', 'pesapal'], {
+    errorMap: () => ({ message: 'Invalid payout method' })
+  }),
+  payoutDetails: z.object({
+    bankName: z.string().optional(),
+    accountNumber: z.string().optional(),
+    accountName: z.string().optional(),
+    mobileNumber: z.string().optional(),
+    provider: z.string().optional(),
+    notes: z.string().optional()
+  }).refine((data) => {
+    // Validate required fields based on payout method
+    return true; // Basic validation for now, can be enhanced
+  }, {
+    message: 'Missing required payout details'
+  })
+});
+
 // Validation middleware
 const validateRequest = (schema) => {
   return (req, res, next) => {
@@ -66,5 +87,6 @@ module.exports = {
   ipnNotificationSchema,
   verificationSchema,
   settingsSchema,
+  payoutRequestSchema,
   validateRequest
 };

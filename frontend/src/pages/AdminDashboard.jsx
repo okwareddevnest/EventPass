@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import OrganizationApproval from '../components/OrganizationApproval';
+import { financialAPI } from '../services/api';
 import {
   Users as UsersIcon,
   UserPlus,
@@ -24,7 +25,15 @@ import {
   Clock,
   DollarSign,
   Calendar,
-  FileText
+  FileText,
+  Wallet,
+  Receipt,
+  CreditCard,
+  TrendingUp,
+  CheckCircle,
+  XCircle,
+  Clock as ClockIcon,
+  ArrowDownToLine
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -43,6 +52,14 @@ const AdminDashboard = () => {
   const [roleRequests, setRoleRequests] = useState([]);
   const [showRoleRequestModal, setShowRoleRequestModal] = useState(false);
   const [selectedRoleRequest, setSelectedRoleRequest] = useState(null);
+  
+  // Financial management state
+  const [financialData, setFinancialData] = useState(null);
+  const [payoutRequests, setPayoutRequests] = useState([]);
+  const [financialSettings, setFinancialSettings] = useState({});
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [selectedPayout, setSelectedPayout] = useState(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -90,6 +107,9 @@ const AdminDashboard = () => {
         const roleRequestsData = await roleRequestsResponse.json();
         setRoleRequests(roleRequestsData.roleRequests);
       }
+
+      // Fetch financial data
+      await fetchFinancialData();
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -199,6 +219,65 @@ const AdminDashboard = () => {
     }
   };
 
+  // Financial management functions
+  const fetchFinancialData = async () => {
+    try {
+      // Fetch financial overview
+      const financialOverview = await financialAPI.admin.getOverview();
+      setFinancialData(financialOverview);
+
+      // Fetch payout requests
+      const payoutsData = await financialAPI.admin.getPayouts();
+      setPayoutRequests(payoutsData.payouts);
+
+      // Fetch financial settings
+      const settings = await financialAPI.admin.getSettings();
+      setFinancialSettings(settings);
+    } catch (err) {
+      console.error('Error fetching financial data:', err);
+      // Don't show error for financial data, as it might not be available
+    }
+  };
+
+  const handlePayoutAction = async (payoutId, action, data = {}) => {
+    try {
+      let response;
+      switch (action) {
+        case 'approve':
+          response = await financialAPI.admin.approvePayout(payoutId, data.adminNotes);
+          break;
+        case 'reject':
+          response = await financialAPI.admin.rejectPayout(payoutId, data.rejectionReason, data.adminNotes);
+          break;
+        case 'complete':
+          response = await financialAPI.admin.completePayout(payoutId, data.externalReference, data.notes);
+          break;
+        default:
+          throw new Error('Invalid action');
+      }
+
+      success(`Payout ${action}d successfully`);
+      setShowPayoutModal(false);
+      setSelectedPayout(null);
+      await fetchFinancialData(); // Refresh data
+    } catch (err) {
+      console.error(`Error ${action}ing payout:`, err);
+      showError(err.response?.data?.message || `Failed to ${action} payout`);
+    }
+  };
+
+  const handleUpdateFinancialSettings = async (newSettings) => {
+    try {
+      await financialAPI.admin.updateSettings(newSettings);
+      success('Financial settings updated successfully');
+      setShowSettingsModal(false);
+      await fetchFinancialData(); // Refresh settings
+    } catch (err) {
+      console.error('Error updating financial settings:', err);
+      showError(err.response?.data?.message || 'Failed to update financial settings');
+    }
+  };
+
   const filteredUsers = userList.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -281,6 +360,7 @@ const AdminDashboard = () => {
           { id: 'overview', label: 'Overview', icon: BarChart3 },
           { id: 'userManagement', label: 'User Management', icon: UsersIcon },
           { id: 'organizations', label: 'Organizations', icon: Shield },
+          { id: 'financial', label: 'Financial Management', icon: Wallet },
           { id: 'roleRequests', label: 'Role Requests', icon: FileText },
           { id: 'system', label: 'System Monitor', icon: Server },
         ].map((tab) => (
@@ -509,6 +589,244 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* Financial Management Tab */}
+      {activeTab === 'financial' && (
+        <div className="space-y-6">
+          {/* Financial Overview */}
+          {financialData && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-neutral/70 text-sm">Total Revenue</p>
+                    <p className="text-3xl font-bold text-neutral">
+                      KES {financialData.stats?.totalRevenue?.toLocaleString() || '0'}
+                    </p>
+                  </div>
+                  <TrendingUp size={32} className="text-green-400" />
+                </div>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-neutral/70 text-sm">Admin Commissions</p>
+                    <p className="text-3xl font-bold text-neutral">
+                      KES {financialData.stats?.totalCommissions?.toLocaleString() || '0'}
+                    </p>
+                  </div>
+                  <Wallet size={32} className="text-primary" />
+                </div>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-neutral/70 text-sm">Organizer Earnings</p>
+                    <p className="text-3xl font-bold text-neutral">
+                      KES {financialData.stats?.organizerEarnings?.toLocaleString() || '0'}
+                    </p>
+                  </div>
+                  <DollarSign size={32} className="text-secondary" />
+                </div>
+              </div>
+
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-neutral/70 text-sm">Pending Payouts</p>
+                    <p className="text-3xl font-bold text-yellow-400">
+                      {financialData.stats?.pendingPayouts || '0'}
+                    </p>
+                  </div>
+                  <ClockIcon size={32} className="text-yellow-400" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Settings and Payout Management */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Financial Settings */}
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-neutral">Financial Settings</h3>
+                <button
+                  onClick={() => setShowSettingsModal(true)}
+                  className="bg-primary/20 hover:bg-primary/30 text-primary px-4 py-2 rounded-lg transition-colors duration-200 flex items-center"
+                >
+                  <Settings size={16} className="mr-2" />
+                  Edit
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                  <p className="text-neutral/70 text-sm">Admin Commission</p>
+                  <p className="text-xl font-bold text-neutral">
+                    {financialSettings.adminCommissionPercentage || 10}%
+                  </p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                  <p className="text-neutral/70 text-sm">Minimum Payout</p>
+                  <p className="text-xl font-bold text-neutral">
+                    KES {financialSettings.minimumPayoutAmount?.toLocaleString() || '1,000'}
+                  </p>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+                  <p className="text-neutral/70 text-sm">Organization Deposit</p>
+                  <p className="text-xl font-bold text-neutral">
+                    KES {financialSettings.organizationDepositAmount?.toLocaleString() || '5,000'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Payout Requests Management */}
+            <div className="lg:col-span-2">
+              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+                <h3 className="text-lg font-semibold text-neutral mb-6">Payout Requests</h3>
+                
+                {payoutRequests.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Receipt size={48} className="text-neutral/30 mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold text-neutral mb-2">No payout requests</h4>
+                    <p className="text-neutral/70">No pending payout requests to review</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {payoutRequests.slice(0, 10).map((payout) => (
+                      <div key={payout._id} className="bg-white/5 border border-white/10 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <h4 className="font-semibold text-neutral">
+                                {payout.userId?.organizationDetails?.orgName || payout.userId?.name || 'Unknown'}
+                              </h4>
+                              <div className={`px-2 py-1 rounded text-xs font-medium ${
+                                payout.status === 'pending' 
+                                  ? 'bg-yellow-500/20 text-yellow-400'
+                                  : payout.status === 'approved' 
+                                  ? 'bg-blue-500/20 text-blue-400'
+                                  : payout.status === 'completed'
+                                  ? 'bg-green-500/20 text-green-400'
+                                  : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                {payout.status}
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-6 text-sm text-neutral/70">
+                              <div className="flex items-center">
+                                <DollarSign size={14} className="mr-1" />
+                                <span>KES {payout.amount.toLocaleString()}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <CreditCard size={14} className="mr-1" />
+                                <span className="capitalize">{payout.payoutMethod?.replace('_', ' ')}</span>
+                              </div>
+                              <div className="flex items-center">
+                                <ClockIcon size={14} className="mr-1" />
+                                <span>{new Date(payout.requestedAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-2 ml-4">
+                            {payout.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPayout(payout);
+                                    setShowPayoutModal(true);
+                                  }}
+                                  className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors duration-200"
+                                  title="Review Payout"
+                                >
+                                  <Eye size={16} />
+                                </button>
+                                <button
+                                  onClick={() => handlePayoutAction(payout._id, 'approve', { adminNotes: 'Auto-approved' })}
+                                  className="p-2 text-green-400 hover:bg-green-500/20 rounded-lg transition-colors duration-200"
+                                  title="Approve Payout"
+                                >
+                                  <CheckCircle size={16} />
+                                </button>
+                                <button
+                                  onClick={() => handlePayoutAction(payout._id, 'reject', { rejectionReason: 'Insufficient details', adminNotes: 'Auto-rejected' })}
+                                  className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors duration-200"
+                                  title="Reject Payout"
+                                >
+                                  <XCircle size={16} />
+                                </button>
+                              </>
+                            )}
+                            
+                            {payout.status === 'approved' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedPayout(payout);
+                                  setShowPayoutModal(true);
+                                }}
+                                className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors duration-200"
+                                title="Mark as Completed"
+                              >
+                                <ArrowDownToLine size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Transactions */}
+          {financialData?.recentTransactions && financialData.recentTransactions.length > 0 && (
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-neutral mb-6">Recent Transactions</h3>
+              <div className="space-y-3">
+                {financialData.recentTransactions.slice(0, 10).map((transaction) => (
+                  <div key={transaction._id} className="bg-white/5 border border-white/10 rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className={`p-2 rounded-lg ${
+                        transaction.type === 'payment' 
+                          ? 'bg-green-500/20 text-green-400' 
+                          : transaction.type === 'commission' 
+                          ? 'bg-primary/20 text-primary'
+                          : 'bg-blue-500/20 text-blue-400'
+                      }`}>
+                        {transaction.type === 'payment' ? <DollarSign size={16} /> : <Receipt size={16} />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-neutral">
+                          {transaction.description}
+                        </p>
+                        <p className="text-xs text-neutral/70">
+                          {new Date(transaction.createdAt).toLocaleDateString()} - {transaction.type}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-semibold ${
+                        transaction.type === 'payment' || transaction.type === 'commission' 
+                          ? 'text-green-400' : 'text-neutral'
+                      }`}>
+                        KES {transaction.amount.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-neutral/70 capitalize">{transaction.status}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Users Tab */}
       {activeTab === 'userManagement' && (
         <div className="space-y-6">
@@ -715,6 +1033,27 @@ const AdminDashboard = () => {
             setSelectedRoleRequest(null);
           }}
           onReview={handleRoleRequestReview}
+        />
+      )}
+
+      {/* Financial Settings Modal */}
+      {showSettingsModal && (
+        <FinancialSettingsModal
+          settings={financialSettings}
+          onClose={() => setShowSettingsModal(false)}
+          onSave={handleUpdateFinancialSettings}
+        />
+      )}
+
+      {/* Payout Review Modal */}
+      {showPayoutModal && selectedPayout && (
+        <PayoutReviewModal
+          payout={selectedPayout}
+          onClose={() => {
+            setShowPayoutModal(false);
+            setSelectedPayout(null);
+          }}
+          onAction={handlePayoutAction}
         />
       )}
     </div>
@@ -952,6 +1291,273 @@ const RoleRequestReviewModal = ({ roleRequest, onClose, onReview }) => {
             >
               {loading ? 'Processing...' : 'Approve Request'}
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Financial Settings Modal Component
+const FinancialSettingsModal = ({ settings, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    adminCommissionPercentage: settings.adminCommissionPercentage || 10,
+    minimumPayoutAmount: settings.minimumPayoutAmount || 1000,
+    organizationDepositAmount: settings.organizationDepositAmount || 5000,
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-md">
+        <h3 className="text-xl font-bold text-neutral mb-4">Financial Settings</h3>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-neutral/70 mb-2">
+              Admin Commission Percentage (%)
+            </label>
+            <input
+              type="number"
+              value={formData.adminCommissionPercentage}
+              onChange={(e) => setFormData({ ...formData, adminCommissionPercentage: parseFloat(e.target.value) })}
+              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary/50"
+              min="0"
+              max="50"
+              step="0.1"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral/70 mb-2">
+              Minimum Payout Amount (KES)
+            </label>
+            <input
+              type="number"
+              value={formData.minimumPayoutAmount}
+              onChange={(e) => setFormData({ ...formData, minimumPayoutAmount: parseFloat(e.target.value) })}
+              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary/50"
+              min="0"
+              step="100"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-neutral/70 mb-2">
+              Organization Deposit Amount (KES)
+            </label>
+            <input
+              type="number"
+              value={formData.organizationDepositAmount}
+              onChange={(e) => setFormData({ ...formData, organizationDepositAmount: parseFloat(e.target.value) })}
+              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary/50"
+              min="0"
+              step="500"
+              required
+            />
+          </div>
+
+          <div className="flex space-x-4 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-3 border border-white/20 text-neutral rounded-lg hover:bg-white/5 transition-all duration-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-gradient-to-r from-primary to-secondary text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+            >
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Payout Review Modal Component
+const PayoutReviewModal = ({ payout, onClose, onAction }) => {
+  const [externalReference, setExternalReference] = useState('');
+  const [adminNotes, setAdminNotes] = useState('');
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleAction = async (action) => {
+    setLoading(true);
+    try {
+      const data = {
+        externalReference,
+        adminNotes,
+        rejectionReason,
+        notes: adminNotes,
+      };
+      await onAction(payout._id, action, data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <h3 className="text-xl font-bold text-neutral mb-4 flex items-center space-x-2">
+          <Receipt size={20} className="text-blue-400" />
+          <span>Review Payout Request</span>
+        </h3>
+
+        <div className="space-y-4">
+          {/* Payout Details */}
+          <div className="bg-white/5 rounded-lg p-4">
+            <h4 className="font-semibold text-neutral mb-2">Payout Details</h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-neutral/70">Organization:</span>
+                <p className="text-neutral font-medium">
+                  {payout.userId?.organizationDetails?.orgName || payout.userId?.name}
+                </p>
+                <p className="text-neutral/70 text-xs">{payout.userId?.email}</p>
+              </div>
+              <div>
+                <span className="text-neutral/70">Amount:</span>
+                <p className="text-neutral font-medium">KES {payout.amount.toLocaleString()}</p>
+              </div>
+              <div>
+                <span className="text-neutral/70">Method:</span>
+                <p className="text-neutral font-medium capitalize">{payout.payoutMethod?.replace('_', ' ')}</p>
+              </div>
+              <div>
+                <span className="text-neutral/70">Status:</span>
+                <p className="text-neutral font-medium capitalize">{payout.status}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Payout Details */}
+          <div className="bg-white/5 rounded-lg p-4">
+            <h4 className="font-semibold text-neutral mb-2">Payment Details</h4>
+            <div className="text-sm space-y-2">
+              {payout.payoutDetails?.bankName && (
+                <p><span className="text-neutral/70">Bank:</span> {payout.payoutDetails.bankName}</p>
+              )}
+              {payout.payoutDetails?.accountNumber && (
+                <p><span className="text-neutral/70">Account:</span> {payout.payoutDetails.accountNumber}</p>
+              )}
+              {payout.payoutDetails?.accountName && (
+                <p><span className="text-neutral/70">Account Name:</span> {payout.payoutDetails.accountName}</p>
+              )}
+              {payout.payoutDetails?.mobileNumber && (
+                <p><span className="text-neutral/70">Mobile:</span> {payout.payoutDetails.mobileNumber}</p>
+              )}
+              {payout.payoutDetails?.provider && (
+                <p><span className="text-neutral/70">Provider:</span> {payout.payoutDetails.provider}</p>
+              )}
+              {payout.payoutDetails?.notes && (
+                <p><span className="text-neutral/70">Notes:</span> {payout.payoutDetails.notes}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Action-specific fields */}
+          {payout.status === 'approved' && (
+            <div>
+              <label className="block text-sm font-medium text-neutral/70 mb-2">
+                External Reference (Transaction ID, etc.)
+              </label>
+              <input
+                type="text"
+                value={externalReference}
+                onChange={(e) => setExternalReference(e.target.value)}
+                className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="Bank reference, mobile money ID, etc."
+              />
+            </div>
+          )}
+
+          {/* Admin Notes */}
+          <div>
+            <label className="block text-sm font-medium text-neutral/70 mb-2">
+              Admin Notes
+            </label>
+            <textarea
+              value={adminNotes}
+              onChange={(e) => setAdminNotes(e.target.value)}
+              placeholder="Add notes about your decision..."
+              rows={3}
+              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+            />
+          </div>
+
+          {/* Rejection Reason */}
+          <div>
+            <label className="block text-sm font-medium text-neutral/70 mb-2">
+              Rejection Reason (if rejecting)
+            </label>
+            <input
+              type="text"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-neutral focus:outline-none focus:ring-2 focus:ring-primary/50"
+              placeholder="Reason for rejection..."
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex space-x-4 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-6 py-3 border border-white/20 text-neutral rounded-lg hover:bg-white/5 transition-all duration-200"
+            >
+              Cancel
+            </button>
+            
+            {payout.status === 'pending' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleAction('reject')}
+                  disabled={loading}
+                  className="flex-1 px-6 py-3 bg-red-500/20 border border-red-500/30 text-red-200 rounded-lg hover:bg-red-500/30 transition-all duration-200 disabled:opacity-50"
+                >
+                  {loading ? 'Processing...' : 'Reject'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAction('approve')}
+                  disabled={loading}
+                  className="flex-1 px-6 py-3 bg-green-500/20 border border-green-500/30 text-green-200 rounded-lg hover:bg-green-500/30 transition-all duration-200 disabled:opacity-50"
+                >
+                  {loading ? 'Processing...' : 'Approve'}
+                </button>
+              </>
+            )}
+
+            {payout.status === 'approved' && (
+              <button
+                type="button"
+                onClick={() => handleAction('complete')}
+                disabled={loading}
+                className="flex-1 px-6 py-3 bg-blue-500/20 border border-blue-500/30 text-blue-200 rounded-lg hover:bg-blue-500/30 transition-all duration-200 disabled:opacity-50"
+              >
+                {loading ? 'Processing...' : 'Mark as Completed'}
+              </button>
+            )}
           </div>
         </div>
       </div>

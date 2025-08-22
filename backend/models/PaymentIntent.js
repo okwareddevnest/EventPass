@@ -10,7 +10,7 @@ const paymentIntentSchema = new mongoose.Schema({
   eventId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Event',
-    required: true,
+    required: false, // Made optional for organization deposits
     index: true,
   },
   merchantReference: {

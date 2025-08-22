@@ -52,6 +52,7 @@ const Auth = () => {
       const authConfig = {
         redirectUri: `${window.location.origin}/auth/callback`,
         scope: ['openid', 'profile', 'email'],
+        responseMode: 'fragment', // Try different response mode
       };
 
       console.log('Auth config:', authConfig);
@@ -74,8 +75,12 @@ const Auth = () => {
         error('Popup blocked. Please allow popups for this site and try again.');
       } else if (err.message?.includes('network')) {
         error('Network error. Please check your internet connection and try again.');
-      } else if (err.message?.includes('origin')) {
-        error('Configuration error. Please contact support if this persists.');
+      } else if (err.message?.includes('origin') || err.message?.includes('postMessage')) {
+        error('Authentication configuration issue. Please try again or contact support.');
+      } else if (err.message?.includes('cancelled') || err.message?.includes('abort')) {
+        error('Authentication was cancelled. Please try again.');
+      } else if (err.message?.includes('timeout')) {
+        error('Authentication timed out. Please try again.');
       } else {
         error(`Authentication failed: ${err.message || 'Unknown error'}`);
       }

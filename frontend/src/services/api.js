@@ -145,5 +145,44 @@ export const organizationsAPI = {
   rejectOrganization: (userId, reason) => apiService.put(`/api/organizations/${userId}/reject`, { reason }),
 };
 
+// Financial-specific API methods
+export const financialAPI = {
+  // Get financial dashboard for organizations
+  getDashboard: () => apiService.get('/api/financial/dashboard'),
+
+  // Request payout
+  requestPayout: (payoutData) => apiService.post('/api/financial/payouts/request', payoutData),
+
+  // Get payout requests
+  getPayouts: (params = {}) => apiService.get('/api/financial/payouts', params),
+
+  // Cancel payout request
+  cancelPayout: (payoutId) => apiService.patch(`/api/financial/payouts/${payoutId}/cancel`),
+
+  // Admin endpoints
+  admin: {
+    // Get financial overview (admin only)
+    getOverview: () => apiService.get('/api/financial/admin/overview'),
+
+    // Get all payout requests (admin only)
+    getPayouts: (params = {}) => apiService.get('/api/financial/admin/payouts', params),
+
+    // Approve payout request (admin only)
+    approvePayout: (payoutId, adminNotes) => apiService.patch(`/api/financial/admin/payouts/${payoutId}/approve`, { adminNotes }),
+
+    // Reject payout request (admin only)
+    rejectPayout: (payoutId, rejectionReason, adminNotes) => apiService.patch(`/api/financial/admin/payouts/${payoutId}/reject`, { rejectionReason, adminNotes }),
+
+    // Complete payout (admin only)
+    completePayout: (payoutId, externalReference, notes) => apiService.patch(`/api/financial/admin/payouts/${payoutId}/complete`, { externalReference, notes }),
+
+    // Update financial settings (admin only)
+    updateSettings: (settings) => apiService.patch('/api/financial/admin/settings', settings),
+
+    // Get financial settings (admin only)
+    getSettings: () => apiService.get('/api/financial/admin/settings'),
+  },
+};
+
 // Default export
 export default apiService;

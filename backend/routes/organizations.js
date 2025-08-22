@@ -297,18 +297,80 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// Create deposit payment URL (placeholder - implement based on your payment system)
+// Create deposit payment URL using Pesapal
 async function createDepositPaymentUrl(user, amount) {
-  // This is a placeholder - implement based on your payment system (Stripe, Pesapal, etc.)
-  // For now, return a mock URL
-  const paymentId = `deposit_${user._id}_${Date.now()}`;
+  const axios = require('axios');
+  const crypto = require('crypto');
+  const pesapalAuth = require('../services/pesapalAuth');
+  const Settings = require('../models/Settings');
+  const PaymentIntent = require('../models/PaymentIntent');
+  
+  try {
+    // Get IPN ID from settings
+    const ipnId = await Settings.getValue(Settings.SYSTEM_KEYS.PESAPAL_IPN_ID);
+    if (!ipnId) {
+      throw new Error('Pesapal IPN not registered. Please contact support.');
+    }
 
-  // Store payment ID in user record
-  user.organizationDetails.depositPaymentId = paymentId;
-  await user.save();
+    const merchantReference = `ORG-DEP-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const callbackUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/organization/deposit-callback`;
+    const endpoints = pesapalAuth.getEndpoints();
+    const headers = await pesapalAuth.getAuthHeaders();
 
-  // Return mock payment URL - replace with actual payment gateway URL
-  return `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/deposit/${paymentId}`;
+    // Prepare order payload for organization deposit
+    const orderPayload = {
+      id: merchantReference,
+      currency: 'KES',
+      amount: amount,
+      description: `Organization registration deposit for ${user.organizationDetails.orgName}`,
+      callback_url: callbackUrl,
+      notification_id: ipnId,
+      redirect_mode: 'TOP_WINDOW',
+      billing_address: {
+        email_address: user.email || '',
+        phone_number: user.organizationDetails.orgPhone || user.phone || '',
+        country_code: 'KE',
+        first_name: user.name.split(' ')[0] || '',
+        last_name: user.name.split(' ').slice(1).join(' ') || '',
+      }
+    };
+
+    // Submit order to Pesapal
+    const response = await axios.post(endpoints.submitOrder, orderPayload, { headers });
+
+    if (response.data.redirect_url && response.data.order_tracking_id) {
+      // Create payment intent record for deposit
+      const paymentIntent = new PaymentIntent({
+        userId: user._id,
+        eventId: null, // No event for organization deposits
+        merchantReference,
+        orderTrackingId: response.data.order_tracking_id,
+        amount: amount,
+        currency: 'KES',
+        status: 'PENDING',
+        pesapalResponse: response.data,
+      });
+
+      await paymentIntent.save();
+
+      // Store payment references in user record
+      user.organizationDetails.depositPaymentId = paymentIntent._id.toString();
+      user.organizationDetails.depositOrderTrackingId = response.data.order_tracking_id;
+      user.organizationDetails.depositMerchantReference = merchantReference;
+      await user.save();
+
+      console.log(`Organization deposit payment created for ${user.organizationDetails.orgName}: KES ${amount}`);
+      
+      return response.data.redirect_url;
+
+    } else {
+      throw new Error('Invalid order response from Pesapal');
+    }
+
+  } catch (error) {
+    console.error('Error creating deposit payment:', error);
+    throw new Error('Failed to create deposit payment: ' + (error.response?.data?.message || error.message));
+  }
 }
 
 module.exports = router;

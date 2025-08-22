@@ -58,6 +58,10 @@ settingsSchema.statics.SYSTEM_KEYS = {
   PESAPAL_IPN_ID: 'pesapal_ipn_id',
   PESAPAL_IPN_URL: 'pesapal_ipn_url',
   PESAPAL_CALLBACK_URL: 'pesapal_callback_url',
+  // Financial settings
+  ADMIN_COMMISSION_PERCENTAGE: 'admin_commission_percentage',
+  MINIMUM_PAYOUT_AMOUNT: 'minimum_payout_amount',
+  ORGANIZATION_DEPOSIT_AMOUNT: 'organization_deposit_amount',
 };
 
 module.exports = mongoose.model('Settings', settingsSchema);
