@@ -33,7 +33,9 @@ import {
   CheckCircle,
   XCircle,
   Clock as ClockIcon,
-  ArrowDownToLine
+  ArrowDownToLine,
+  Check,
+  X
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -70,26 +72,56 @@ const AdminDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      console.log('Starting to fetch dashboard data...');
 
       // Fetch users
-      const usersData = await apiService.get('/api/admin/users');
-      setUserList(usersData.users);
-      setStats(usersData.stats);
+      try {
+        console.log('Fetching users data...');
+        const usersData = await apiService.get('/api/admin/users');
+        console.log('Users data received:', usersData);
+        setUserList(usersData.users || []);
+        setStats(usersData.stats || {});
+      } catch (userError) {
+        console.error('Error fetching users:', userError);
+        setUserList([]);
+        setStats({});
+      }
 
       // Fetch system stats
-      const statsData = await apiService.get('/api/admin/stats');
-      setSystemStats(statsData);
+      try {
+        console.log('Fetching system stats...');
+        const statsData = await apiService.get('/api/admin/stats');
+        console.log('System stats received:', statsData);
+        setSystemStats(statsData || {});
+      } catch (statsError) {
+        console.error('Error fetching system stats:', statsError);
+        setSystemStats({});
+      }
 
       // Fetch role requests
-      const roleRequestsData = await apiService.get('/api/admin/role-requests');
-      setRoleRequests(roleRequestsData.roleRequests);
+      try {
+        console.log('Fetching role requests...');
+        const roleRequestsData = await apiService.get('/api/admin/role-requests');
+        console.log('Role requests data received:', roleRequestsData);
+        setRoleRequests(roleRequestsData.roleRequests || []);
+      } catch (roleError) {
+        console.error('Error fetching role requests:', roleError);
+        setRoleRequests([]);
+      }
 
       // Fetch financial data
-      await fetchFinancialData();
+      try {
+        console.log('Fetching financial data...');
+        await fetchFinancialData();
+      } catch (financialError) {
+        console.error('Error fetching financial data:', financialError);
+        // Financial data is optional, so don't break the dashboard
+      }
 
+      console.log('Dashboard data loading completed');
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      showError('Failed to load dashboard data');
+      showError('Failed to load dashboard data. Please check your authentication and try again.');
     } finally {
       setLoading(false);
     }
@@ -148,17 +180,38 @@ const AdminDashboard = () => {
   // Financial management functions
   const fetchFinancialData = async () => {
     try {
+      console.log('Fetching financial overview...');
       // Fetch financial overview
-      const financialOverview = await financialAPI.admin.getOverview();
-      setFinancialData(financialOverview);
+      try {
+        const financialOverview = await financialAPI.admin.getOverview();
+        console.log('Financial overview received:', financialOverview);
+        setFinancialData(financialOverview);
+      } catch (overviewError) {
+        console.error('Error fetching financial overview:', overviewError);
+        setFinancialData(null);
+      }
 
       // Fetch payout requests
-      const payoutsData = await financialAPI.admin.getPayouts();
-      setPayoutRequests(payoutsData.payouts);
+      try {
+        console.log('Fetching payout requests...');
+        const payoutsData = await financialAPI.admin.getPayouts();
+        console.log('Payout requests received:', payoutsData);
+        setPayoutRequests(payoutsData.payouts || []);
+      } catch (payoutsError) {
+        console.error('Error fetching payout requests:', payoutsError);
+        setPayoutRequests([]);
+      }
 
       // Fetch financial settings
-      const settings = await financialAPI.admin.getSettings();
-      setFinancialSettings(settings);
+      try {
+        console.log('Fetching financial settings...');
+        const settings = await financialAPI.admin.getSettings();
+        console.log('Financial settings received:', settings);
+        setFinancialSettings(settings || {});
+      } catch (settingsError) {
+        console.error('Error fetching financial settings:', settingsError);
+        setFinancialSettings({});
+      }
     } catch (err) {
       console.error('Error fetching financial data:', err);
       // Don't show error for financial data, as it might not be available
