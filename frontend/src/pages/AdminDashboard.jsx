@@ -281,11 +281,11 @@ const AdminDashboard = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex space-x-1 bg-white/5 p-1 rounded-lg">
+      <div className="flex flex-wrap space-x-1 space-y-1 bg-white/5 p-1 rounded-lg overflow-x-auto">
         {[
           { id: 'overview', label: 'Overview', icon: BarChart3 },
-          { id: 'userManagement', label: 'User Management', icon: UsersIcon },
           { id: 'organizations', label: 'Organizations', icon: Shield },
+          { id: 'userManagement', label: 'User Management', icon: UsersIcon },
           { id: 'financial', label: 'Financial Management', icon: Wallet },
           { id: 'roleRequests', label: 'Role Requests', icon: FileText },
           { id: 'system', label: 'System Monitor', icon: Server },
