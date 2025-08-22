@@ -144,7 +144,6 @@ router.get('/pending-approvals', authenticateToken, isAdmin, async (req, res) =>
     const pendingOrganizations = await User.find({
       role: 'organization',
       'organizationDetails.isApproved': false,
-      'organizationDetails.depositPaid': true,
       isActive: true,
     })
     .select('name email organizationDetails createdAt')
@@ -155,7 +154,6 @@ router.get('/pending-approvals', authenticateToken, isAdmin, async (req, res) =>
     const total = await User.countDocuments({
       role: 'organization',
       'organizationDetails.isApproved': false,
-      'organizationDetails.depositPaid': true,
       isActive: true,
     });
 
