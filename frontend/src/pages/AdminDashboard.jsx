@@ -31,7 +31,7 @@ const AdminDashboard = () => {
   const { error: showError, success } = useNotification();
 
   const [activeTab, setActiveTab] = useState('overview');
-  const [users, setUsers] = useState([]);
+  const [userList, setUserList] = useState([]);
   const [stats, setStats] = useState({});
   const [systemStats, setSystemStats] = useState({});
   const [loading, setLoading] = useState(true);
@@ -59,7 +59,7 @@ const AdminDashboard = () => {
 
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
-        setUsers(usersData.users);
+        setUserList(usersData.users);
         setStats(usersData.stats);
       }
 
@@ -157,7 +157,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = userList.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = !roleFilter || user.role === roleFilter;
